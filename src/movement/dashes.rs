@@ -35,3 +35,14 @@ impl Dash for StepDash {
     )
   }
 }
+
+
+pub struct PlayerMovement {
+  grounded_dash: dyn Dash,
+}
+
+pub struct Backdash {
+  speed: f32,
+  recovery_frames: u8,
+  invunl: u8
+}
