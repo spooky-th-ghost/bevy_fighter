@@ -5,21 +5,20 @@ pub struct MotionEvent{
   pub motion: u8,
   pub player_id: u8,
   pub special_motion_duration: u8,
-  pub special_motion: Option<SpecialMotion>
+  pub special_motion: Option<CommandType>
 }
 
 /// Notation, Priority, and Regex for special motions
-pub struct SpecialMotionData {
-  notation: String,
-  priority: u8,
-  regular_expression: Regex,
-  command: SpecialMotion
+#[derive(Debug)]
+pub struct CommandMotion {
+  pub priority: u8,
+  pub regular_expression: Regex,
+  pub command: CommandType
 }
 
-impl SpecialMotionData {
-  pub fn new(notation: String, priority: u8, regular_expression: Regex, command: SpecialMotion) -> Self {
-    SpecialMotionData { 
-      notation, 
+impl CommandMotion {
+  pub fn new(priority: u8, regular_expression: Regex, command: CommandType) -> Self {
+    CommandMotion { 
       priority, 
       regular_expression,
       command
@@ -28,7 +27,7 @@ impl SpecialMotionData {
 }
 
 #[derive(Debug, Clone)]
-pub enum SpecialMotion {
+pub enum CommandType {
     FIREBALL,
     R_FIREBALL,
     DP,
@@ -51,91 +50,6 @@ impl MotionEvent {
       special_motion: None
     }
   }
-}
-
-#[derive(Debug)]
-pub struct InputBuffer {
-  pub motions: Vec<u8>,
-  pub player_id: u8,
-  pub special_priority: u8,
-  pub special_motion_duration: u8,
-  pub special_motion: Option<SpecialMotion>
-}
-
-impl InputBuffer {
-  pub fn new(player_id: u8) -> Self {
-    InputBuffer {
-      motions: Vec::new(),
-      player_id,
-      special_priority: 0,
-      special_motion_duration: 0,
-      special_motion: None
-    }
-  }
-
-  pub fn update(&mut self, motion_input_reader: &mut EventReader<MotionEvent>) {
-    self.tick();
-    for event in motion_input_reader.iter() {
-      if event.player_id == self.player_id {
-        self.motions.push(event.motion);
-      };
-    };
-    let (motion_string, command_input) = self.extract_special_motions();
-
-    let mut cm_input = String::new();
-    if let Some(sp) = command_input {
-      write!(cm_input,"{:?}", sp).unwrap();
-    } else {
-      write!(cm_input," ").unwrap();
-    };
-
-    println!("{:?} : {:?}",motion_string,cm_input);
-  }
-
-  fn tick(&mut self) {
-    if self.motions.len() > 20 {
-      self.motions.remove(0);
-    }
-
-    if self.special_motion_duration > 0 {
-      self.special_motion_duration -= 1;
-    }
-
-    if self.special_motion_duration == 0 {
-      self.special_motion = None;
-    }
-  }
-
-  fn motion_to_string(self: &Self) -> String {
-    let mut motions_string = String::new();
-    for motion in self.motions.iter() {
-      write!(motions_string,"{:?}",motion).unwrap();
-    }
-    return motions_string;
-  }
-
-  fn extract_special_motions(self: &mut Self) -> (String,Option<SpecialMotion>) {
-    let motion_string = self.motion_to_string();
-    let mut priority: u8 = self.special_priority;
-    let mut current_command: Option<SpecialMotion> = None;
-
-    for special_motion in MOTIONS.iter() {
-      if special_motion.regular_expression.is_match(&motion_string[..]) {
-        if special_motion.priority > priority {
-          priority = special_motion.priority;
-          current_command = Some(special_motion.command.clone());
-        }
-      }
-    }
-
-    if let Some(c) = current_command {
-      self.special_motion = Some(c.clone());
-      self.special_motion_duration = 5;
-    }
-
-    return (motion_string, self.special_motion.clone());
-  }
-
 }
 
 pub fn write_motion_inputs(
