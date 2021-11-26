@@ -7,5 +7,5 @@ fn first_test() {
 
 #[test]
 fn second_test() {
-    assert_eq(1,2);
+    assert_eq!(1,2);
 }
