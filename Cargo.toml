@@ -8,3 +8,11 @@ edition = "2021"
 [dependencies]
 bevy = "0.5"
 bevy_backroll = "0.1"
+regex = "1.4.6"
+phf = { version = "0.9", features = ["macros"] }
+lazy_static = "1.4.0"
+
+
+[[example]]
+name = "input_stream"
+path = "examples/inputs/input_stream.rs"

@@ -1,5 +1,5 @@
 pub use crate::prelude::*;
-pub use bevy::prelude::*;
+
 
 /// How the player should move on the next frame
 pub struct PhysicsState {
@@ -9,7 +9,7 @@ pub struct PhysicsState {
 }
 
 /// Primary way to handle if a player can perform an input
-pub struct PlayerState {
+pub struct ActionState {
   pub busy_duration: u8,
   pub invuln: u8,
   pub armor_duration: u8,
