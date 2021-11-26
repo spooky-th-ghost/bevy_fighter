@@ -1,4 +1,4 @@
-#![allow(non_camel_case_types)]
+#![allow(non_camel_case_types,clippy::needless_return, dead_code)]
 #[macro_use]
 pub extern crate lazy_static;
 

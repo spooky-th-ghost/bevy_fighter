@@ -53,7 +53,7 @@ impl InputBuffer {
     }
   }
 
-  fn motion_to_string(self: &Self) -> String {
+  fn motion_to_string(&mut self) -> String {
     let mut motions_string = String::new();
     for motion in self.motions.iter() {
       write!(motions_string,"{:?}",motion).unwrap();
@@ -61,22 +61,20 @@ impl InputBuffer {
     return motions_string;
   }
 
-  fn extract_special_motions(self: &mut Self) -> (String,Option<CommandType>) {
+  fn extract_special_motions(&mut self) -> (String,Option<CommandType>) {
     let motion_string = self.motion_to_string();
     let mut priority: u8 = self.command_priority;
     let mut current_command: Option<CommandType> = None;
 
     for command_motion in MOTIONS.iter() {
-      if command_motion.regular_expression.is_match(&motion_string[..]) {
-        if command_motion.priority > priority {
-          priority = command_motion.priority;
-          current_command = Some(command_motion.command.clone());
-        }
+      if command_motion.regular_expression.is_match(&motion_string[..]) && command_motion.priority > priority{
+        priority = command_motion.priority;
+        current_command = Some(command_motion.command.clone());
       }
     }
 
     if let Some(c) = current_command {
-      self.command_type = Some(c.clone());
+      self.command_type = Some(c);
       self.command_duration = 5;
     }
 
