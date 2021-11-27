@@ -16,3 +16,7 @@ lazy_static = "1.4.0"
 [[example]]
 name = "input_stream"
 path = "examples/inputs/input_stream.rs"
+
+[[example]]
+name = "basic_movement"
+path = "examples/movement/basic_movement.rs"
