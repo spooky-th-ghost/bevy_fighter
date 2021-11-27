@@ -62,41 +62,68 @@ pub fn write_motion_inputs(
   keyboard_input: Res<Input<KeyCode>>, 
   mut motion_writer: EventWriter<MotionEvent>
 ) {
+  let mut h_axis: f32 = 0.0;
+  let mut v_axis: f32 = 0.0;
+
   if keyboard_input.pressed(KeyCode::A) {
-    if keyboard_input.pressed(KeyCode::S) {
-      motion_writer.send(MotionEvent::new(1,1));
-      return
-    }
-    if keyboard_input.pressed(KeyCode::W) {
-      motion_writer.send(MotionEvent::new(7,1));
-      return
-    }
-      motion_writer.send(MotionEvent::new(4,1));
-      return
-  };
-  if keyboard_input.pressed(KeyCode::D) {
-    if keyboard_input.pressed(KeyCode::S) {
-      motion_writer.send(MotionEvent::new(3,1));
-      return
-    }
-    if keyboard_input.pressed(KeyCode::W) {
-      motion_writer.send(MotionEvent::new(9,1));
-      return
-    }
-    motion_writer.send(MotionEvent::new(6,1));
-    return
+    h_axis -= 1.0;
   }
+
+  if keyboard_input.pressed(KeyCode::D) {
+    h_axis += 1.0;
+  }
+
   if keyboard_input.pressed(KeyCode::W) {
-    motion_writer.send(MotionEvent::new(8,1));
-    return
+    v_axis = 1.0;
   }
 
   if keyboard_input.pressed(KeyCode::S) {
-    motion_writer.send(MotionEvent::new(2,1));
-    return
+    if v_axis == 0.0 {
+      v_axis = -1.0;
+    }
   }
-  motion_writer.send(MotionEvent::new(5,1));
-  return
+
+  let mut motion: u8 = 5;
+
+  if h_axis == 0.0 {
+    if v_axis == 1.0 {
+      motion = 8;
+    }
+
+    if v_axis == -1.0 {
+      motion = 2;
+    }
+  }
+
+  if h_axis == -1.0 {
+    if v_axis == 1.0 {
+      motion = 7;
+    }
+
+    if v_axis == 0.0 {
+      motion = 4;
+    }
+
+    if v_axis == -1.0 {
+      motion = 1;
+    }
+  }
+
+  if h_axis == 1.0 {
+    if v_axis == 1.0 {
+      motion = 9;
+    }
+
+    if v_axis == 0.0 {
+      motion = 6;
+    }
+
+    if v_axis == -1.0 {
+      motion = 3;
+    }
+  }
+
+  motion_writer.send(MotionEvent::new(motion,1));
 }
 
 pub fn read_motion_inputs(

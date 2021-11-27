@@ -16,9 +16,9 @@ fn setup(
 
     coms
       .spawn_bundle(SpriteBundle {
-        sprite: Sprite::new(Vec2::new(600.0, 20.0)),
-        material: materials.add(Color::BLACK.into()),
-        transform: Transform::from_xyz(-150.0, -100.0, 0.0),
+        sprite: Sprite::new(Vec2::new(30.0, 60.0)),
+        material: materials.add(Color::RED.into()),
+        transform: Transform::default(),
         ..Default::default()
       });
 }
