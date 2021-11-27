@@ -6,5 +6,7 @@ struct PlayerData {
   action_state: ActionState,
   physics_state: PhysicsState,
   round_count: u8,
-  meter: u8
+  meter: u8,
+  dash: impl Dash,
+  backsash: impl BackDash,
 }
