@@ -60,14 +60,14 @@ impl InputBuffer {
     }
     return motions_string;
   }
-
+  
   fn extract_special_motions(&mut self) -> (String,Option<CommandType>) {
     let motion_string = self.motion_to_string();
     let mut priority: u8 = self.command_priority;
     let mut current_command: Option<CommandType> = None;
 
     for command_motion in MOTIONS.iter() {
-      if command_motion.regular_expression.is_match(&motion_string[..]) && command_motion.priority > priority{
+      if  command_motion.check(&motion_string[..], priority) {
         priority = command_motion.priority;
         current_command = Some(command_motion.command.clone());
       }

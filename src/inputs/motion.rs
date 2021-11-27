@@ -12,7 +12,7 @@ pub struct MotionEvent{
 #[derive(Debug)]
 pub struct CommandMotion {
   pub priority: u8,
-  pub regular_expression: Regex,
+  regular_expression: Regex,
   pub command: CommandType
 }
 
@@ -24,6 +24,12 @@ impl CommandMotion {
       command
     }
   }
+
+  pub fn check(&self, buffer_string: &str, buffer_priority: u8) -> bool {
+    return self.regular_expression.is_match(buffer_string) && self.priority > buffer_priority;
+  }
+
+
 }
 
 #[derive(Debug, Clone)]
