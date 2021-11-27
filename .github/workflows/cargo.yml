@@ -13,5 +13,6 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - run: sudo apt install libasound2-dev libudev-dev pkg-config
     - name: Run tests
       run: cargo test --verbose
