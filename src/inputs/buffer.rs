@@ -6,7 +6,8 @@ pub struct InputBuffer {
   pub player_id: u8,
   pub command_priority: u8,
   pub command_duration: u8,
-  pub command_type: Option<CommandType>
+  pub command_type: Option<CommandType>,
+  pub current_motion: u8,
 }
 
 impl InputBuffer {
@@ -16,7 +17,8 @@ impl InputBuffer {
       player_id,
       command_priority: 0,
       command_duration: 0,
-      command_type: None
+      command_type: None,
+      current_motion: 5
     }
   }
 
@@ -25,6 +27,7 @@ impl InputBuffer {
     for event in motion_input_reader.iter() {
       if event.player_id == self.player_id {
         self.motions.push(event.motion);
+        self.current_motion = event.motion;
       };
     };
     let (motion_string, command_input) = self.extract_special_motions();

@@ -22,17 +22,13 @@ pub struct StepDash {
       (
         ActionState {
           busy_duration: self.recovery_frames,
-          invuln: 0,
-          armor_duration: 0,
           facing_right: player_state.facing_right,
           player_state_name: PlayerStateName::DASHING,
-          armor_type: None,
-          cancellable_actions: None,
+          ..Default::default()
         },
         PhysicsState {
           velocity: Vec2::new(self.speed * facing_multiplier, physics_state.velocity.y),
-          gravity: 0.0,
-          collidable: true,
+          ..Default::default()
         }
       )
     }
