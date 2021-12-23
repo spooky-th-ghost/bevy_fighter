@@ -22,10 +22,10 @@ impl InputBuffer {
     }
   }
 
-  pub fn update(&mut self, motion_input_reader: &mut EventReader<MotionEvent>) {
+  pub fn update(&mut self, motion_input_reader: &mut EventReader<MotionEvent>, player_id: u8) {
     self.tick();
     for event in motion_input_reader.iter() {
-      if event.player_id == self.player_id {
+      if event.player_id == player_id {
         self.motions.push(event.motion);
         self.current_motion = event.motion;
       };

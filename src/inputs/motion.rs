@@ -128,10 +128,10 @@ pub fn write_motion_inputs(
 
 pub fn read_motion_inputs(
   mut motion_input_reader: EventReader<MotionEvent>, 
-  mut query: Query<&mut InputBuffer>,
+  mut query: Query<(&mut InputBuffer, &PlayerId)>,
 ) {
-  for mut buffer in query.iter_mut() {
-    buffer.update(&mut motion_input_reader);
+  for (mut buffer, pid) in query.iter_mut() {
+    buffer.update(&mut motion_input_reader, pid.0);
   };
 }
 

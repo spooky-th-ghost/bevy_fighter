@@ -5,6 +5,8 @@ pub extern crate lazy_static;
 mod inputs;
 mod movement;
 mod constants;
+mod player;
+mod display;
 
 pub mod prelude {
   // external crates
@@ -13,6 +15,7 @@ pub mod prelude {
   pub use bevy::{
     input::keyboard::KeyboardInput,
     core::FixedTimestep,
+    ui::Val::*,
     prelude::*
   };
   pub use std::fmt::Write;
@@ -21,4 +24,6 @@ pub mod prelude {
   pub use crate::inputs::*;
   pub use crate::movement::*;
   pub use crate::constants::*;
+  pub use crate::player::*;
+  pub use crate::display::*;
   }

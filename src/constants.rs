@@ -1,7 +1,8 @@
+use bevy::asset::Asset;
+
 pub use crate::prelude::*;
 
 lazy_static! {
-  static ref BLAH: u8 = 4;
   pub static ref MOTIONS: [CommandMotion; 8] = [
     CommandMotion::new(
       1,
@@ -44,4 +45,6 @@ lazy_static! {
       CommandType::HALF_CIRCLE_FORWARD
     ),
   ];
+
+  //pub static ref ARROW_HANDLE: Handle<Texture> = World::Assets //Wondering how to load the sprite here
 }
