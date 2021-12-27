@@ -1,7 +1,45 @@
 use std::default;
-
+use lerp::Lerp;
 pub use crate::prelude::*;
 
+trait CustomLerp {
+  fn custom_lerp(&self, target: Self, t: f32) -> Self;
+}
+
+impl CustomLerp for Vec2 {
+  fn custom_lerp(&self, target: Vec2, t: f32) -> Vec2 {
+    let _x = self.x.lerp(target.x,t);
+    let _y = self.y.lerp(target.y,t);
+    return Vec2::new(_x,_y);
+  }
+}
+
+#[derive(Clone, Copy)]
+pub struct InterpolatedForce {
+  current_velocity: Vec2,
+  starting_velocity: Vec2,
+  duration: u8,
+  frames_elapsed: u8
+}
+
+impl InterpolatedForce {
+
+  pub fn new(starting_velocity: Vec2, duration: u8) -> Self {
+    return InterpolatedForce {
+      current_velocity: starting_velocity,
+      starting_velocity,
+      duration,
+      frames_elapsed: 0
+    }
+  }
+
+  pub fn update(&mut self) -> Vec2 {
+    self.frames_elapsed += 1;
+    let t = (self.frames_elapsed / self.duration) as f32;
+    self.current_velocity = self.current_velocity.custom_lerp(Vec2::ZERO,t);
+    return self.current_velocity;
+  }
+}
 
 /// How the player should move on the next frame
 pub struct PhysicsState {
@@ -9,6 +47,7 @@ pub struct PhysicsState {
   pub gravity: f32,
   pub collidable: bool,
   pub is_grounded: bool,
+  pub int_force: Option<InterpolatedForce>
 }
 
 impl Default for PhysicsState {
@@ -19,12 +58,14 @@ impl Default for PhysicsState {
         gravity: 0.0,
         collidable: true,
         is_grounded: true,
+        int_force: None
       }
     }
   }
 }
 
 /// Primary way to handle if a player can perform an input
+#[derive(Clone, Copy)]
 pub struct ActionState {
   pub busy_duration: u8,
   pub invuln: u8,
@@ -32,7 +73,6 @@ pub struct ActionState {
   pub facing_right: bool,
   pub player_state_name: PlayerStateName,
   pub armor_type: Option<ArmorType>,
-  pub cancellable_actions: Option<Vec<ActionType>>
 }
 
 impl Default for ActionState {
@@ -44,7 +84,6 @@ impl Default for ActionState {
         facing_right: true,
         player_state_name: PlayerStateName::default(),
         armor_type: None,
-        cancellable_actions: None
       }
   }
 }
@@ -54,6 +93,7 @@ pub enum PhysicsStateName {
   BLOCKING, 
 }
 
+#[derive(Clone,Copy)]
 pub enum PlayerStateName {
   DASHING,
   RUNNING,
@@ -62,7 +102,8 @@ pub enum PlayerStateName {
   BLOCKING,
   JUMPING,
   JUGGLE,
-  STANDING 
+  STANDING,
+  BACKDASHING 
 }
 
 impl Default for PlayerStateName {
@@ -70,12 +111,13 @@ impl Default for PlayerStateName {
 }
 
 
+#[derive(Clone,Copy)]
 pub enum ArmorType {
   SUPER,
   HYPER,
 }
 
-
+#[derive(Clone, Copy)]
 pub enum ActionType {
   NORMAL,
   COMMAND_NORMAL,

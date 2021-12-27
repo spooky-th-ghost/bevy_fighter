@@ -39,7 +39,7 @@ impl InputBuffer {
       write!(cm_input," ").unwrap();
     };
 
-    println!("{:?} : {:?}",motion_string,cm_input);
+    //println!("{:?} : {:?}",motion_string,cm_input);
   }
 
   fn tick(&mut self) {

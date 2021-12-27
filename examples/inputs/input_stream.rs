@@ -86,16 +86,3 @@ fn setup(
       .insert(InputDisplay);
 }
 
-pub fn cleanup_input(
-  mut commands: Commands,
-  mut query: Query<&Children, With<InputDisplay>>,
-) {
-  for children in query.iter_mut() {
-    if children.len() > 10 {
-      if let Some(c) = children.first() {
-        commands.entity(c).despawn();
-      }
-    }
-  }
-}
-

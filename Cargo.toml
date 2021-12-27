@@ -11,6 +11,7 @@ bevy_backroll = "0.1"
 regex = "1.4.6"
 phf = { version = "0.9", features = ["macros"] }
 lazy_static = "1.4.0"
+lerp = { version = "0.4", features = ["derive"] }
 
 
 [[example]]

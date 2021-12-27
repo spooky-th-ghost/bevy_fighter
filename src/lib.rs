@@ -7,6 +7,7 @@ mod movement;
 mod constants;
 mod player;
 mod display;
+mod utils;
 
 pub mod prelude {
   // external crates
@@ -26,4 +27,5 @@ pub mod prelude {
   pub use crate::constants::*;
   pub use crate::player::*;
   pub use crate::display::*;
+  pub use crate::utils::*;
   }
