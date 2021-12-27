@@ -5,6 +5,7 @@ trait CustomLerp {
   fn custom_lerp(&self, target: Self, t: f32) -> Self;
 }
 
+
 impl CustomLerp for Vec2 {
   fn custom_lerp(&self, target: Vec2, t: f32) -> Vec2 {
     let _x = self.x.lerp(target.x,t);
@@ -18,7 +19,7 @@ impl CustomLerp for Vec2 {
 /// interpolated forces are set to ease to 0 accross their duration, the proper velocity from
 /// the interpolated force can be accessed by calling their `update()` method, which will update 
 /// the easing value for the IntForce as well
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct InterpolatedForce {
   current_velocity: Vec2,
   starting_velocity: Vec2,
@@ -38,22 +39,31 @@ impl InterpolatedForce {
   }
 
   pub fn update(&mut self) -> Vec2 {
-    self.frames_elapsed += 1;
-    let t = (self.frames_elapsed / self.duration) as f32;
+    self.tick();
+    let t = self.frames_elapsed as f32 / self.duration as f32;
     self.current_velocity = self.current_velocity.custom_lerp(Vec2::ZERO,t);
     return self.current_velocity;
   }
+
+  pub fn tick(&mut self) {
+    self.frames_elapsed += 1;
+  }
+
+  pub fn is_finished(&self) -> bool {
+    return self.duration == self.frames_elapsed;
+  }
 }
 
-/// How the player should move on the next frame
-
-#[derive(Clone,Copy)]
+/// States representing all possible player actions
+#[derive(Clone,Copy, Debug)]
 pub enum ActionState {
   DASHING,
-  RUNNING,
   WALKING,
+  BACKWALKING,
   ATTACKING,
   BLOCKING,
+  CROUCHBLOCKING,
+  CROUCHING,
   JUMPING,
   JUGGLE,
   STANDING,
