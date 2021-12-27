@@ -1,92 +1,92 @@
 pub use crate::prelude::*;
 pub struct PlayerMovement {
-    physics_state: PhysicsState,
-    action_state: ActionState,
+    busy: u8,
+    invuln: u8,
+    armor: u8,
+    facing_right: bool,
     walk_speed: f32,
     back_walk_speed: f32,
     dash_speed: f32,
     backdash_speed: f32,
+    velocity: Vec2,
+    gravity: f32,
+    is_grounded: bool,
+    action_state: ActionState,
+    int_force: Option<InterpolatedForce>
   }
   
   impl PlayerMovement {
     pub fn new() -> Self {
       PlayerMovement{
+        busy: 0,
+        invuln: 0,
+        armor: 0,
+        facing_right: true,
         walk_speed: 4.0,
         back_walk_speed: 2.5,
         dash_speed: 8.0,
         backdash_speed: 15.0,
-        physics_state: PhysicsState::default(),
+        velocity: Vec2::ZERO,
+        gravity: 10.0,
+        is_grounded: true,
         action_state: ActionState::default(),
+        int_force: None
       }
     }
 
     pub fn action_state_maintenence(&mut self) {
-      let new_busy = countdown(self.action_state.busy_duration);
-      let new_invuln = countdown(self.action_state.invuln);
-      let new_armor = countdown(self.action_state.armor_duration);
-
-      self.action_state = ActionState {
-        busy_duration: new_busy,
-        invuln: new_invuln,
-        armor_duration: new_armor,
-        ..self.action_state
-      }
+      self.busy = countdown(self.busy);
+      self.invuln = countdown( self.invuln);
+      self.armor = countdown(self.armor);
     }
 
     pub fn is_busy(&self) -> bool {
-      return self.action_state.busy_duration != 0;
+      return self.busy != 0;
     }
 
     pub fn is_grounded(&self) -> bool {
-      return self.physics_state.is_grounded;
+      return self.is_grounded;
     }
 
     pub fn target_velo(&self) -> Vec2 {
-      if let Some(mut i_force) = self.physics_state.int_force {
+      if let Some(mut i_force) = self.int_force {
         return i_force.update();
       } else {
-        return self.physics_state.velocity;
+        return self.velocity;
       }
     }
 
-    pub fn set_action_state(&mut self, state_enum: PlayerStateName) {
-      self.action_state = ActionState {
-        player_state_name: state_enum,
-        ..Default::default()
-      }
+    pub fn set_action_state(&mut self, action_state: ActionState) {
+      self.action_state = action_state
     }
 
-    pub fn set_action_state_busy(&mut self, state_enum: PlayerStateName, busy: u8) {
-      self.action_state = ActionState {
-        player_state_name: state_enum,
-        busy_duration: busy,
-        ..Default::default()
-      }
+    pub fn set_busy(&mut self, busy: u8) {
+      self.busy = busy;
     }
 
-    pub fn state_enum(&self) -> PlayerStateName {
-      return self.action_state.player_state_name;
+    pub fn action_state(&self) -> ActionState {
+      return self.action_state;
     }
 
     pub fn update_states_from_buffer(&mut self, buffer: &InputBuffer) {
       self.action_state_maintenence();
       let mut new_velocity = Vec2::ZERO;
-      if self.is_grounded() {
+      if self.is_grounded {
         match buffer.current_motion {
           6 => new_velocity = Vec2::new(self.walk_speed, 0.0),
           4 => new_velocity = Vec2::new(-self.back_walk_speed, 0.0),
           _ => ()
         }
 
-        match self.state_enum() {
-          PlayerStateName::DASHING => {
+        match self.action_state {
+          ActionState::DASHING => {
             match buffer.current_motion {
               6 | 3 => new_velocity = Vec2::new(self.dash_speed, 0.0),
               4 => {
                 new_velocity = Vec2::new(-self.back_walk_speed, 0.0);
-                self.set_action_state(PlayerStateName::WALKING);
+                self.action_state = ActionState::WALKING;
               }
-              _ => self.set_action_state(PlayerStateName::STANDING)
+              _ => self.action_state = ActionState::STANDING,
             }
           }
           _ => ()
@@ -96,11 +96,12 @@ pub struct PlayerMovement {
           match ct {
             CommandType::DASH => {
               new_velocity = Vec2::new(self.dash_speed, 0.0);
-              self.set_action_state(PlayerStateName::DASHING);
+              self.action_state = ActionState::DASHING;
             },
             CommandType::BACK_DASH => {
               new_velocity = Vec2::new(-self.backdash_speed, 0.0);
-              self.set_action_state_busy(PlayerStateName::BACKDASHING,30);
+              self.action_state = ActionState::BACKDASHING;
+              self.busy = 30;
             }
             _ => ()
           }
@@ -108,10 +109,7 @@ pub struct PlayerMovement {
       } else {
 
       }
-      self.physics_state = PhysicsState {
-        velocity: new_velocity,
-        ..Default::default()
-      }
+      self.velocity = new_velocity;
     }
   }
 
@@ -125,8 +123,8 @@ pub struct PlayerMovement {
 
   pub fn apply_player_velocity(mut query: Query<(&mut Transform, &PlayerMovement)>) {
     for (mut transform, movement) in query.iter_mut() {
-      match movement.state_enum() {
-        PlayerStateName::BACKDASHING => {
+      match movement.action_state {
+        ActionState::BACKDASHING => {
 
         }
         _ => {

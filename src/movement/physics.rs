@@ -1,4 +1,3 @@
-use std::default;
 use lerp::Lerp;
 pub use crate::prelude::*;
 
@@ -14,6 +13,11 @@ impl CustomLerp for Vec2 {
   }
 }
 
+
+/// Used to add fake physics forces, instead of constant changes to velocity, 
+/// interpolated forces are set to ease to 0 accross their duration, the proper velocity from
+/// the interpolated force can be accessed by calling their `update()` method, which will update 
+/// the easing value for the IntForce as well
 #[derive(Clone, Copy)]
 pub struct InterpolatedForce {
   current_velocity: Vec2,
@@ -42,59 +46,9 @@ impl InterpolatedForce {
 }
 
 /// How the player should move on the next frame
-pub struct PhysicsState {
-  pub velocity: Vec2,
-  pub gravity: f32,
-  pub collidable: bool,
-  pub is_grounded: bool,
-  pub int_force: Option<InterpolatedForce>
-}
-
-impl Default for PhysicsState {
-  fn default() -> Self {
-    {
-      PhysicsState {
-        velocity: Vec2::ZERO,
-        gravity: 0.0,
-        collidable: true,
-        is_grounded: true,
-        int_force: None
-      }
-    }
-  }
-}
-
-/// Primary way to handle if a player can perform an input
-#[derive(Clone, Copy)]
-pub struct ActionState {
-  pub busy_duration: u8,
-  pub invuln: u8,
-  pub armor_duration: u8,
-  pub facing_right: bool,
-  pub player_state_name: PlayerStateName,
-  pub armor_type: Option<ArmorType>,
-}
-
-impl Default for ActionState {
-  fn default() -> Self {
-      ActionState {
-        busy_duration: 0,
-        invuln: 0,
-        armor_duration: 0,
-        facing_right: true,
-        player_state_name: PlayerStateName::default(),
-        armor_type: None,
-      }
-  }
-}
-pub enum PhysicsStateName {
-  DASHING,
-  ATTACKING,
-  BLOCKING, 
-}
 
 #[derive(Clone,Copy)]
-pub enum PlayerStateName {
+pub enum ActionState {
   DASHING,
   RUNNING,
   WALKING,
@@ -106,8 +60,8 @@ pub enum PlayerStateName {
   BACKDASHING 
 }
 
-impl Default for PlayerStateName {
-  fn default() -> Self {PlayerStateName::STANDING}
+impl Default for ActionState {
+  fn default() -> Self {Self::STANDING}
 }
 
 
