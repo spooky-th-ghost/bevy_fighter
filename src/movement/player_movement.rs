@@ -8,12 +8,12 @@ pub struct PlayerMovement {
     walk_speed: f32,
     back_walk_speed: f32,
     dash_speed: f32,
-    backdash_speed: f32,
     velocity: Vec2,
     gravity: f32,
     is_grounded: bool,
     action_state: ActionState,
-    int_force: Option<InterpolatedForce>
+    int_force: Option<InterpolatedForce>,
+    backdash: Box<dyn Backdash>
   }
   
   impl PlayerMovement {
@@ -26,27 +26,55 @@ pub struct PlayerMovement {
         walk_speed: 4.0,
         back_walk_speed: 2.5,
         dash_speed: 8.0,
-        backdash_speed: 25.0,
         velocity: Vec2::ZERO,
         gravity: 10.0,
         is_grounded: true,
         action_state: ActionState::default(),
-        int_force: None
+        int_force: None,
+        backdash: Box::new(BasicBackdash::new(25.0,20,20))
+      }
+    }
+    // Setters
+    pub fn set_action_state(&mut self, action_state: ActionState) {
+      self.action_state = action_state
+    }
+
+    pub fn set_busy(&mut self, busy: u8) {
+      self.busy = busy;
+    }
+
+    pub fn set_i_force(&mut self, i_force: InterpolatedForce) {
+      self.int_force = Some(i_force);
+    }
+
+    // Getters
+    pub fn get_facing_vector(&self) -> f32 {
+       if self.facing_right {
+        return 1.0;
+      } else {
+        return -1.0;
       }
     }
 
+    pub fn get_busy(&self) -> bool {
+      return self.busy != 0;
+    }
+
+    pub fn get_grounded(&self) -> bool {
+      return self.is_grounded;
+    }
+
+    // Logic
     pub fn action_state_maintenence(&mut self) {
       self.busy = countdown(self.busy);
       self.invuln = countdown( self.invuln);
       self.armor = countdown(self.armor);
     }
 
-    pub fn is_busy(&self) -> bool {
-      return self.busy != 0;
-    }
-
-    pub fn is_grounded(&self) -> bool {
-      return self.is_grounded;
+    pub fn execute_backdash(&mut self) {
+      let (bd_i_force, bd_busy) = self.backdash.exec(self.get_facing_vector());
+      self.set_i_force(bd_i_force);
+      self.set_busy(bd_busy);
     }
 
     pub fn target_velo(&mut self) -> Vec2 {
@@ -59,18 +87,7 @@ pub struct PlayerMovement {
       }
     }
 
-    pub fn set_action_state(&mut self, action_state: ActionState) {
-      self.action_state = action_state
-    }
 
-    pub fn set_busy(&mut self, busy: u8) {
-      self.busy = busy;
-    }
-
-    pub fn set_i_force(&mut self, busy: u8, starting_velo: Vec2, duration: u8) {
-      self.busy = busy;
-      self.int_force = Some(InterpolatedForce::new(starting_velo, duration));
-    }
 
     pub fn action_state(&self) -> ActionState {
       return self.action_state;
@@ -78,7 +95,7 @@ pub struct PlayerMovement {
 
     pub fn manage_action_state(&mut self, buffer: &InputBuffer) {
       let mut new_state = ActionState::default();
-      if !self.is_busy() {
+      if !self.get_busy() {
         if self.is_grounded {
           match self.action_state {
             ActionState::WALKING | ActionState::BACKWALKING | ActionState::CROUCHING | ActionState::STANDING => {
@@ -96,9 +113,7 @@ pub struct PlayerMovement {
                   },
                   CommandType::BACK_DASH => {
                     new_state = ActionState::BACKDASHING;
-                    self.busy = 30;
-                    self.set_i_force(20, Vec2::new(-self.backdash_speed, 0.0), 20)
-                    
+                    self.execute_backdash()
                   }
                   _ => ()
                 }               

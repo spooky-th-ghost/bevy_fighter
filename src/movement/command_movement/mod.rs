@@ -1,7 +1,7 @@
 mod dashes;
-mod backdashes;
+mod backdash;
 mod movement_traits;
 
 pub use dashes::*;
-pub use backdashes::*;
+pub use backdash::*;
 pub use movement_traits::*;

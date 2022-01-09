@@ -5,6 +5,6 @@ pub trait Dash {
     fn sustainable(&self) -> bool;
 }
 
-pub trait BackDash {
-    fn exec(&self, player_movement: PlayerMovement);
+pub trait Backdash: Sync + Send  {
+    fn exec(&self, facing_vector: f32) -> (InterpolatedForce, u8);
 }

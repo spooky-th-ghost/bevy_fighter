@@ -1,5 +1,3 @@
-use bevy::asset::Asset;
-
 pub use crate::prelude::*;
 
 lazy_static! {
@@ -45,6 +43,4 @@ lazy_static! {
       CommandType::HALF_CIRCLE_FORWARD
     ),
   ];
-
-  //pub static ref ARROW_HANDLE: Handle<Texture> = World::Assets //Wondering how to load the sprite here
 }
