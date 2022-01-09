@@ -7,7 +7,7 @@ edition = "2021"
 
 
 [dependencies]
-bevy = "0.5"
+bevy = "0.6.0"
 bevy_backroll = "0.1"
 regex = "1.4.6"
 phf = { version = "0.9", features = ["macros"] }

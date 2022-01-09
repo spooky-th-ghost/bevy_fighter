@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(Default, Bundle)]
+#[derive(Default, Component)]
 pub struct InputRow {
   pub motion: u8,
   pub duration: u8,
@@ -9,10 +9,6 @@ pub struct InputRow {
 
 pub struct InputDisplay;
 
-#[derive(Clone)]
-pub struct ArrowImage {
-  pub handle: Handle<Texture>
-}
 
 // pub fn add_input_row(parent_entity: Entity, arrow_texture: Handle<Texture>, mut commands: Commands, mut materials: ResMut<Assets<ColorMaterial>>,) {
 

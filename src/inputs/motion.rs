@@ -138,14 +138,14 @@ pub fn read_motion_inputs(
 pub struct MotionInputPlugin;
 
 impl Plugin for MotionInputPlugin {
-  fn build(&self, app: &mut AppBuilder) {
+  fn build(&self, app: &mut App) {
     app
     .add_event::<MotionEvent>()
     .add_system_set(
       SystemSet::new()
         .with_run_criteria(FixedTimestep::step(0.01667))
-        .with_system(write_motion_inputs.system().label("WRITE"))
-        .with_system(read_motion_inputs.system().after("WRITE"))
+        .with_system(write_motion_inputs.label("WRITE"))
+        .with_system(read_motion_inputs.after("WRITE"))
     );
   }
 }

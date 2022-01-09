@@ -1,4 +1,5 @@
 pub use crate::prelude::*;
+#[derive(Component)]
 pub struct PlayerMovement {
     busy: u8,
     invuln: u8,

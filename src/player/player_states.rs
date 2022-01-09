@@ -12,4 +12,5 @@ use crate::prelude::*;
 // }
 
 pub struct Player;
+#[derive(Component)]
 pub struct PlayerId(pub u8);

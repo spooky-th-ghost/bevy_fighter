@@ -1,6 +1,6 @@
 pub use crate::prelude::*;
 
-#[derive(Debug)]
+#[derive(Debug, Component)]
 pub struct InputBuffer {
   pub motions: Vec<u8>,
   pub player_id: u8,
