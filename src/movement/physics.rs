@@ -23,16 +23,18 @@ impl CustomLerp for Vec2 {
 pub struct InterpolatedForce {
   current_velocity: Vec2,
   starting_velocity: Vec2,
+  ending_velocity: Vec2,
   duration: u8,
   frames_elapsed: u8
 }
 
 impl InterpolatedForce {
 
-  pub fn new(starting_velocity: Vec2, duration: u8) -> Self {
+  pub fn new(starting_velocity: Vec2, ending_velocity: Vec2, duration: u8) -> Self {
     return InterpolatedForce {
       current_velocity: starting_velocity,
       starting_velocity,
+      ending_velocity,
       duration,
       frames_elapsed: 0
     }
@@ -41,7 +43,7 @@ impl InterpolatedForce {
   pub fn update(&mut self) -> Vec2 {
     self.tick();
     let t = self.frames_elapsed as f32 / self.duration as f32;
-    self.current_velocity = self.current_velocity.custom_lerp(Vec2::ZERO,t);
+    self.current_velocity = self.current_velocity.custom_lerp(self.ending_velocity,t);
     return self.current_velocity;
   }
 

@@ -1,5 +1,4 @@
 pub use crate::prelude::*;
-
 pub struct BasicBackdash {
     speed: f32,
     busy: u8,
@@ -21,6 +20,7 @@ pub struct BasicBackdash {
       return (
         InterpolatedForce::new(
           Vec2::new(-self.speed * facing_vector, 0.0),
+          Vec2::new(-2.0 * facing_vector, 0.0),
           self.motion_duration
         ),
         self.busy
