@@ -13,6 +13,7 @@ fn main() {
 fn setup(
     mut coms: Commands,
 ) {
+    load_character_sprite_data("./src/test.json");
     coms.spawn_bundle(OrthographicCameraBundle::new_2d());
     coms.spawn_bundle(UiCameraBundle::default());
 

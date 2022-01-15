@@ -484,6 +484,7 @@ dependencies = [
  "lerp",
  "phf",
  "regex",
+ "serde_json",
 ]
 
 [[package]]

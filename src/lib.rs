@@ -8,18 +8,31 @@ mod constants;
 mod player;
 mod display;
 mod utils;
+mod animation;
+mod collision;
 
 pub mod prelude {
   // external crates
   pub use lazy_static;
   pub use regex::Regex;
+  pub use serde_json::{
+    from_str,
+    Result,
+    Value
+  };
   pub use bevy::{
     input::keyboard::KeyboardInput,
     core::FixedTimestep,
     ui::Val::*,
+    utils::HashMap,
     prelude::*
   };
-  pub use std::fmt::Write;
+  pub use std::{
+    fmt::Write,
+    path::Path,
+    fs::read_to_string,
+    io::BufReader,
+  };
   
   // local mods
   pub use crate::inputs::*;
@@ -28,4 +41,6 @@ pub mod prelude {
   pub use crate::player::*;
   pub use crate::display::*;
   pub use crate::utils::*;
+  pub use crate::animation::*;
+  pub use crate::collision::*;
   }

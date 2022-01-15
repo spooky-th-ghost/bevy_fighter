@@ -9,6 +9,7 @@ edition = "2021"
 [dependencies]
 bevy = "0.6.0"
 bevy_backroll = "0.1"
+serde_json = "1.0"
 regex = "1.4.6"
 phf = { version = "0.9", features = ["macros"] }
 lazy_static = "1.4.0"

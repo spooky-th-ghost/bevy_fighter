@@ -1,0 +1,10 @@
+{
+  "animations": [
+    {
+      "name": "idle",
+      "first_frame": 0,
+      "length": 5,
+      "loopable": false
+    }
+  ]
+}
