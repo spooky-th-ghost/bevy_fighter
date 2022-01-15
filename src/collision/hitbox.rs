@@ -29,7 +29,7 @@ impl Hitbox {
   ///
   pub fn collide_with_hurtbox(&self,hurtbox: &Hurtbox, mut hit_writer: EventWriter<HitEvent>, mut block_writer: EventWriter<BlockEvent>) {
     if self.player_id != hurtbox.player_id {
-      if hurtbox.does_connect(&self.property) {
+      if self.does_connect(hurtbox) {
         if self.is_blocked(hurtbox) {
           block_writer.send(BlockEvent::new(self.hitbox_data, self.player_id, hurtbox.player_id))
         } else {
@@ -39,7 +39,11 @@ impl Hitbox {
     }
   }
 
-    pub fn is_blocked(&self, hurtbox: &Hurtbox) -> bool {
+  pub fn does_connect(&self, hurtbox: &Hurtbox) -> bool {
+    return !hurtbox.ignores(&self.property);
+  }
+
+  pub fn is_blocked(&self, hurtbox: &Hurtbox) -> bool {
     if let Some(block_type) = hurtbox.block_type {
       if hurtbox.is_grounded {
         match self.property {

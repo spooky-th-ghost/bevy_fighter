@@ -11,8 +11,8 @@ pub struct Hurtbox {
 }
 
 impl Hurtbox {
-  pub fn does_connect(&self, attack_property: &AttackProperty) -> bool {
-    return !self.ignored_properties.contains(attack_property);
+  pub fn ignores(&self, attack_property: &AttackProperty) -> bool {
+     return !self.ignored_properties.contains(attack_property);
   }
 }
 
