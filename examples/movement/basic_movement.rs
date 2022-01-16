@@ -59,12 +59,13 @@ fn add_hitbox(
 
 fn setup(
     mut coms: Commands,
+    box_colors: Res<CollisionBoxColors>
 ) {
     load_character_sprite_data("./src/test.json");
     coms.spawn_bundle(OrthographicCameraBundle::new_2d());
     coms.spawn_bundle(UiCameraBundle::default());
 
-    coms
+    let player = coms
       .spawn_bundle(SpriteBundle {
         sprite: Sprite{
           color: Color::RED,
@@ -76,5 +77,24 @@ fn setup(
       })
       .insert(InputBuffer::new(1))
       .insert(PlayerId(1))
-      .insert(PlayerMovement::new());
+      .insert(PlayerMovement::new())
+      .id();
+
+    let hurtbox = coms
+      .spawn_bundle(SpriteBundle {
+        sprite: Sprite{
+          color: box_colors.hurtbox_color,
+          custom_size: Some(Vec2::new(35.0, 35.0)),
+          ..Default::default()
+        },
+        transform: Transform::from_xyz(0.0, -12.5, 1.0),
+        ..Default::default()
+      })
+      .insert(Hurtbox {
+        player_id: 1,
+        ..Default::default()
+      })
+      .id();
+    
+    coms.entity(player).push_children(&[hurtbox]);
 }
