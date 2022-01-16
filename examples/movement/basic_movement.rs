@@ -4,10 +4,57 @@ fn main() {
   App::new()
     .add_plugins(DefaultPlugins)
     .add_plugin(MotionInputPlugin)
+    .insert_resource(CollisionBoxColors::new(0.4))
     .add_startup_system(setup)
-    .add_system(update_player_states)
-    .add_system(apply_player_velocity)
+    .add_system_set(
+      SystemSet::new()
+        .with_run_criteria(FixedTimestep::step(0.01667))
+        .with_system(update_player_states)
+        .with_system(apply_player_velocity)
+        .with_system(add_hitbox)
+        .with_system(manage_hitboxes)
+    )
     .run();
+}
+
+fn manage_hitboxes(
+  mut commands: Commands,
+  mut query: Query<(Entity, &mut Hitbox)>
+) {
+  for (e,mut hb) in query.iter_mut() {
+    hb.update();
+    if !hb.active {
+      commands.entity(e).despawn();
+    }
+  }
+}
+
+fn add_hitbox(
+  mut commands: Commands,
+  box_colors: Res<CollisionBoxColors>, 
+  keyboard_input: Res<Input<KeyCode>>,
+  query: Query<(&PlayerId, &PlayerMovement, Entity)>,
+  //keyboard_input: Res<Input<KeyCode>>, 
+) -> () {
+  for (player_id, player_movement, entity) in query.iter() {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+      spawn_hitbox(
+        &mut commands,
+        box_colors.hitbox_color,
+        entity,
+        player_id.0,
+        Vec2::new(40.0,20.0),
+        Vec2::new(15.0*player_movement.get_facing_vector(), 25.0),
+        Hitbox::new(
+          player_id.0,
+          false,
+          HitboxData::jab(5) ,
+          AttackProperty::MID,
+          50
+        )
+      );
+    }
+  }
 }
 
 fn setup(

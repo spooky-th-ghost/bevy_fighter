@@ -141,9 +141,9 @@ pub struct PlayerMovement {
 
       match self.action_state {
         ActionState::CROUCHING | ActionState::STANDING => new_velocity = Vec2::ZERO,
-        ActionState::WALKING => new_velocity = Vec2::new(self.walk_speed, 0.0),
-        ActionState::BACKWALKING => new_velocity = Vec2::new(-self.back_walk_speed, 0.0),
-        ActionState::DASHING => new_velocity = Vec2::new(self.dash_speed,0.0),
+        ActionState::WALKING => new_velocity = Vec2::new(self.walk_speed * self.get_facing_vector(), 0.0),
+        ActionState::BACKWALKING => new_velocity = Vec2::new(-self.back_walk_speed * self.get_facing_vector(), 0.0),
+        ActionState::DASHING => new_velocity = Vec2::new(self.dash_speed * self.get_facing_vector(),0.0),
         _ => ()
       }
 
