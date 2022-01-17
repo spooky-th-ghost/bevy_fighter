@@ -10,58 +10,44 @@ impl Default for PlayerInputs {
       local_devices: vec![
         InputMapper {
             player_id: 1,
-            a: KeyCode::U,
-            b: KeyCode::I,
-            c: KeyCode::O,
-            d: KeyCode::H,
-            x_positive: KeyCode::E,
-            x_negative: KeyCode::Q,
-            y_positive: KeyCode::Space,
-            y_negative: KeyCode::W,
+            a: RawButton::G(Gamepad(0),GamepadButtonType::West),
+            b: RawButton::G(Gamepad(0),GamepadButtonType::North),
+            c: RawButton::G(Gamepad(0),GamepadButtonType::RightTrigger),
+            d: RawButton::G(Gamepad(0),GamepadButtonType::South),
+            x_positive: RawButton::G(Gamepad(0),GamepadButtonType::DPadRight),
+            x_negative: RawButton::G(Gamepad(0),GamepadButtonType::DPadLeft),
+            y_positive: RawButton::G(Gamepad(0),GamepadButtonType::DPadUp),
+            y_negative: RawButton::G(Gamepad(0),GamepadButtonType::DPadDown),
             facing_right: false,
-            device_type: InputDeviceType::Keyboard
         },
           InputMapper {
             player_id: 2,
-            a: KeyCode::J,
-            b: KeyCode::K,
-            c: KeyCode::L,
-            d: KeyCode::N,
-            x_positive: KeyCode::D,
-            x_negative: KeyCode::A,
-            y_positive: KeyCode::V,
-            y_negative: KeyCode::S,
+            a: RawButton::K(KeyCode::J),
+            b: RawButton::K(KeyCode::K),
+            c: RawButton::K(KeyCode::L),
+            d: RawButton::K(KeyCode::N),
+            x_positive: RawButton::K(KeyCode::D),
+            x_negative: RawButton::K(KeyCode::A),
+            y_positive: RawButton::K(KeyCode::V),
+            y_negative: RawButton::K(KeyCode::S),
             facing_right: false,
-            device_type: InputDeviceType::Keyboard
         },
       ]
     }
   }
 }
 
-/// Implementing from world can be used later to read a config file and map saved inputs as the resource is instantiated
-// impl FromWorld for InputDevices {
-//     fn from_world(_world: &mut World) -> Self {
-//       InputDevices {
-//         devices: vec! [
-
-//         ]
-//       }
-//     }
-// }
-
 pub struct InputMapper {
   pub player_id: u8,
-  pub a: KeyCode,
-  pub b: KeyCode,
-  pub c: KeyCode,
-  pub d: KeyCode,
-  pub x_positive: KeyCode,
-  pub x_negative: KeyCode,
-  pub y_positive: KeyCode,
-  pub y_negative: KeyCode,
-  pub facing_right: bool,
-  pub device_type: InputDeviceType
+  pub a: RawButton,
+  pub b: RawButton,
+  pub c: RawButton,
+  pub d: RawButton,
+  pub x_positive: RawButton,
+  pub x_negative: RawButton,
+  pub y_positive: RawButton,
+  pub y_negative: RawButton,
+  pub facing_right: bool
 }
 
 impl InputMapper {
@@ -72,10 +58,126 @@ impl InputMapper {
         return -1.0;
       }
     }
+
+    pub fn get_pressed_buttons(&self, keyboard_input: &Res<Input<KeyCode>>, button_input: &Res<Input<GamepadButton>>) -> InputActionsPressed {
+      let right_pressed = match self.x_positive {
+        RawButton::K(keycode) => keyboard_input.pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let left_pressed = match self.x_negative {
+        RawButton::K(keycode) => keyboard_input.pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let down_pressed = match self.y_positive {
+        RawButton::K(keycode) => keyboard_input.pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let up_pressed = match self.y_negative {
+        RawButton::K(keycode) => keyboard_input.pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let a_pressed = match self.a {
+        RawButton::K(keycode) => keyboard_input.pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let b_pressed = match self.b {
+        RawButton::K(keycode) => keyboard_input.pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let c_pressed = match self.c {
+        RawButton::K(keycode) => keyboard_input.pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let d_pressed = match self.d {
+        RawButton::K(keycode) => keyboard_input.pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
+      };
+
+      return InputActionsPressed {
+        a: a_pressed,
+        b: b_pressed,
+        c: c_pressed,
+        d: d_pressed,
+        right: right_pressed,
+        left: left_pressed,
+        up: up_pressed,
+        down: down_pressed,
+      }
+    }
+
+    pub fn get_just_pressed_buttons(&self, keyboard_input: &Res<Input<KeyCode>>, button_input: &Res<Input<GamepadButton>>) -> InputActionsPressed {
+      let right_pressed = match self.x_positive {
+        RawButton::K(keycode) => keyboard_input.just_pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.just_pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let left_pressed = match self.x_negative {
+        RawButton::K(keycode) => keyboard_input.just_pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.just_pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let down_pressed = match self.y_positive {
+        RawButton::K(keycode) => keyboard_input.just_pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.just_pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let up_pressed = match self.y_negative {
+        RawButton::K(keycode) => keyboard_input.just_pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.just_pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let a_pressed = match self.a {
+        RawButton::K(keycode) => keyboard_input.just_pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.just_pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let b_pressed = match self.b {
+        RawButton::K(keycode) => keyboard_input.just_pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.just_pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let c_pressed = match self.c {
+        RawButton::K(keycode) => keyboard_input.just_pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.just_pressed(GamepadButton(device_id, button_type)),
+      };
+
+      let d_pressed = match self.d {
+        RawButton::K(keycode) => keyboard_input.just_pressed(keycode),
+        RawButton::G(device_id,button_type) => button_input.just_pressed(GamepadButton(device_id, button_type)),
+      };
+
+      return InputActionsPressed {
+        a: a_pressed,
+        b: b_pressed,
+        c: c_pressed,
+        d: d_pressed,
+        right: right_pressed,
+        left: left_pressed,
+        up: up_pressed,
+        down: down_pressed,
+      }
+    }
 }
 
-pub enum InputDeviceType {
-  Keyboard,
-  Gamepad
+pub struct InputActionsPressed {
+  pub a: bool,
+  pub b: bool,
+  pub c: bool,
+  pub d: bool,
+  pub right: bool,
+  pub left: bool,
+  pub up: bool,
+  pub down: bool,
+}
+pub enum RawButton {
+  K(KeyCode),
+  G(Gamepad,GamepadButtonType)
 }
 

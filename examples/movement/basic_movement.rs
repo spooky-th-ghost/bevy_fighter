@@ -6,6 +6,7 @@ fn main() {
     .add_plugin(MotionInputPlugin)
     .insert_resource(CollisionBoxColors::new(0.4))
     .add_startup_system(setup)
+    .add_system(read_gamepad_inputs)
     .add_system_set(
       SystemSet::new()
         .with_run_criteria(FixedTimestep::step(0.01667))
@@ -33,33 +34,59 @@ fn add_hitbox(
   mut commands: Commands,
   box_colors: Res<CollisionBoxColors>, 
   keyboard_input: Res<Input<KeyCode>>,
+  button_input: Res<Input<GamepadButton>>,
   player_inputs: Res<PlayerInputs>,
   query: Query<(&PlayerId, &PlayerMovement, Entity)>,
 ) -> () {
   for (player_id, player_movement, entity) in query.iter() {
-    if keyboard_input.just_pressed(player_inputs.local_devices[0].a) {
-      spawn_hitbox(
-        &mut commands,
-        box_colors.hitbox_color,
-        entity,
-        player_id.0,
-        Vec2::new(40.0,20.0),
-        Vec2::new(15.0*player_movement.get_facing_vector(), 25.0),
-        Hitbox::new(
-          player_id.0,
-          false,
-          HitboxData::jab(5) ,
-          AttackProperty::MID,
-          50
-        )
-      );
+    for mapper in player_inputs.local_devices.iter() {
+      if mapper.player_id == player_id.0 {
+        let InputActionsPressed {a, ..} = mapper.get_just_pressed_buttons(&keyboard_input, &button_input);
+
+        if a {
+          spawn_hitbox(
+            &mut commands,
+            box_colors.hitbox_color,
+            entity,
+            player_id.0,
+            Vec2::new(40.0,20.0),
+            Vec2::new(15.0*player_movement.get_facing_vector(), 25.0),
+            Hitbox::new(
+              player_id.0,
+              false,
+              HitboxData::jab(5) ,
+              AttackProperty::MID,
+              50
+            )
+          );
+        }
+      }
     }
   }
 }
 
+
+fn read_gamepad_inputs(mut gamepad_event: EventReader<GamepadEvent>) {
+    for event in gamepad_event.iter() {
+        match &event {
+            GamepadEvent(gamepad, GamepadEventType::Connected) => {
+                info!("{:?} Connected", gamepad);
+            }
+            GamepadEvent(gamepad, GamepadEventType::Disconnected) => {
+                info!("{:?} Disconnected", gamepad);
+            }
+            GamepadEvent(gamepad, GamepadEventType::ButtonChanged(button_type, value)) => {
+                info!("Button {:?} of {:?} is changed to {}", button_type, gamepad, value);
+            }
+            GamepadEvent(gamepad, GamepadEventType::AxisChanged(axis_type, value)) => {
+                info!("Axis {:?} of {:?} is changed to {}", axis_type, gamepad, value);
+            }
+        }
+    }
+}
 fn setup(
     mut coms: Commands,
-    box_colors: Res<CollisionBoxColors>
+    box_colors: Res<CollisionBoxColors>,
 ) {
     load_character_sprite_data("./src/test.json");
     coms.spawn_bundle(OrthographicCameraBundle::new_2d());

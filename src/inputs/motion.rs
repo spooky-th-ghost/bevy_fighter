@@ -61,26 +61,50 @@ impl MotionEvent {
 pub fn write_motion_inputs(
   player_inputs: Res<PlayerInputs>,
   keyboard_input: Res<Input<KeyCode>>, 
+  button_input: Res<Input<GamepadButton>>,
   mut motion_writer: EventWriter<MotionEvent>
 ) {
   for mapper in player_inputs.local_devices.iter() {
     let mut h_axis: f32 = 0.0;
     let mut v_axis: f32 = 0.0;
-    let InputMapper {x_positive, x_negative, y_positive, y_negative, player_id, ..} = mapper;
+    let InputMapper { player_id, ..} = mapper;
 
-    if keyboard_input.pressed(*x_negative) {
+    // let h_axis_positive_pressed = match mapper.x_positive {
+    //   RawButton::K(keycode) => keyboard_input.pressed(keycode),
+    //   RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
+    // };
+
+    // let h_axis_negative_pressed = match mapper.x_negative {
+    //   RawButton::K(keycode) => keyboard_input.pressed(keycode),
+    //   RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
+    // };
+
+    // let v_axis_positive_pressed = match mapper.y_positive {
+    //   RawButton::K(keycode) => keyboard_input.pressed(keycode),
+    //   RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
+    // };
+
+    // let v_axis_negative_pressed = match mapper.y_negative {
+    //   RawButton::K(keycode) => keyboard_input.pressed(keycode),
+    //   RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
+    // };
+    
+    let InputActionsPressed {right, left, up, down, ..} = mapper.get_pressed_buttons(&keyboard_input, &button_input);
+
+
+    if left {
       h_axis -= 1.0 *  mapper.get_facing_vector();
     }
 
-    if keyboard_input.pressed(*x_positive) {
+    if right {
       h_axis += 1.0 * mapper.get_facing_vector();
     }
 
-    if keyboard_input.pressed(*y_positive) {
+    if up {
       v_axis = 1.0;
     }
 
-    if keyboard_input.pressed(*y_negative) {
+    if down {
       if v_axis == 0.0 {
         v_axis = -1.0;
       }
@@ -128,74 +152,6 @@ pub fn write_motion_inputs(
     motion_writer.send(MotionEvent::new(motion,*player_id));
   }
 }
-
-// pub fn write_motion_inputs(
-//   keyboard_input: Res<Input<KeyCode>>, 
-//   mut motion_writer: EventWriter<MotionEvent>
-// ) {
-//   let mut h_axis: f32 = 0.0;
-//   let mut v_axis: f32 = 0.0;
-
-//   if keyboard_input.pressed(KeyCode::A) {
-//     h_axis -= 1.0;
-//   }
-
-//   if keyboard_input.pressed(KeyCode::D) {
-//     h_axis += 1.0;
-//   }
-
-//   if keyboard_input.pressed(KeyCode::W) {
-//     v_axis = 1.0;
-//   }
-
-//   if keyboard_input.pressed(KeyCode::S) {
-//     if v_axis == 0.0 {
-//       v_axis = -1.0;
-//     }
-//   }
-
-//   let mut motion: u8 = 5;
-
-//   if h_axis == 0.0 {
-//     if v_axis == 1.0 {
-//       motion = 8;
-//     }
-
-//     if v_axis == -1.0 {
-//       motion = 2;
-//     }
-//   }
-
-//   if h_axis == -1.0 {
-//     if v_axis == 1.0 {
-//       motion = 7;
-//     }
-
-//     if v_axis == 0.0 {
-//       motion = 4;
-//     }
-
-//     if v_axis == -1.0 {
-//       motion = 1;
-//     }
-//   }
-
-//   if h_axis == 1.0 {
-//     if v_axis == 1.0 {
-//       motion = 9;
-//     }
-
-//     if v_axis == 0.0 {
-//       motion = 6;
-//     }
-
-//     if v_axis == -1.0 {
-//       motion = 3;
-//     }
-//   }
-
-//   motion_writer.send(MotionEvent::new(motion,1));
-// }
 
 pub fn read_motion_inputs(
   mut motion_input_reader: EventReader<MotionEvent>, 
