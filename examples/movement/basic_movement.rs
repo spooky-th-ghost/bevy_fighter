@@ -3,10 +3,10 @@ use bevy_fighter::prelude::*;
 fn main() {
   App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(MotionInputPlugin)
+    .add_plugin(FighterInputPlugin)
     .insert_resource(CollisionBoxColors::new(0.4))
     .add_startup_system(setup)
-    .add_system(read_gamepad_inputs)
+    //.add_system(read_gamepad_inputs)
     .add_system_set(
       SystemSet::new()
         .with_run_criteria(FixedTimestep::step(0.01667))
@@ -102,8 +102,6 @@ fn setup(
         transform: Transform::default(),
         ..Default::default()
       })
-      .insert(InputBuffer::new(1))
-      .insert(PlayerId(1))
       .insert(PlayerMovement::new())
       .id();
 

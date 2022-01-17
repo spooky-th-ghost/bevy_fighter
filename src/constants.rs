@@ -4,12 +4,12 @@ lazy_static! {
   pub static ref MOTIONS: [CommandMotion; 8] = [
     CommandMotion::new(
       1,
-      Regex::new("([^6]+6{1,5}[^6]{0,4}5[^5]{0,4}6)").unwrap(),
+      Regex::new("([^6]+6{1,5}[^6]{0,9}5[^5]{0,4}6)").unwrap(),
       CommandType::DASH
     ),
     CommandMotion::new(
       1,
-      Regex::new("([^4]+4{1,5}[^4]{0,4}5[^5]{0,4}4)").unwrap(),
+      Regex::new("([^4]+4{1,5}[^4]{0,9}5[^5]{0,4}4)").unwrap(),
       CommandType::BACK_DASH
     ),
     CommandMotion::new(

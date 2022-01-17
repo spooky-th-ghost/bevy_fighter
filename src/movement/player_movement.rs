@@ -95,7 +95,7 @@ pub struct PlayerMovement {
       return self.action_state;
     }
 
-    pub fn manage_action_state(&mut self, buffer: &InputBuffer) {
+    pub fn manage_action_state(&mut self, buffer: &FighterInputBuffer) {
       let mut new_state = ActionState::default();
       if !self.get_busy() {
         if self.is_grounded {
@@ -135,6 +135,7 @@ pub struct PlayerMovement {
         }
       }
       self.action_state = new_state;
+      println!("{:?}", new_state);
       self.update_velocity_from_state()
     }
 
@@ -153,15 +154,19 @@ pub struct PlayerMovement {
     }
   }
 
-  pub fn update_player_states (mut player_inputs: ResMut<PlayerInputs>, mut query: Query<(&InputBuffer, &mut PlayerMovement)>) {
-    for (buffer, mut player_movement) in query.iter_mut() {
+  pub fn update_player_states (mut player_inputs: ResMut<PlayerInputs>, mut query: Query<&mut PlayerMovement>) {
+    for mut player_movement in query.iter_mut() {
       for mapper in player_inputs.local_devices.iter_mut() {
         if player_movement.player_id == mapper.player_id {
           mapper.facing_right = player_movement.facing_right;
         }
       }
+      for buffer in player_inputs.buffers.iter() {
+        if buffer.player_id == player_movement.player_id {
+          player_movement.manage_action_state(buffer);
+        }
+      }
       player_movement.action_state_maintenence();
-      player_movement.manage_action_state(buffer);
     }
   }
 
