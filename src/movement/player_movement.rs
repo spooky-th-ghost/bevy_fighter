@@ -1,6 +1,7 @@
 pub use crate::prelude::*;
 #[derive(Component)]
 pub struct PlayerMovement {
+    player_id: u8,
     busy: u8,
     invuln: u8,
     armor: u8,
@@ -19,10 +20,11 @@ pub struct PlayerMovement {
   impl PlayerMovement {
     pub fn new() -> Self {
       PlayerMovement{
+        player_id: 1,
         busy: 0,
         invuln: 0,
         armor: 0,
-        facing_right: true,
+        facing_right: false,
         walk_speed: 4.0,
         back_walk_speed: 2.5,
         dash_speed: 8.0,
@@ -151,8 +153,13 @@ pub struct PlayerMovement {
     }
   }
 
-  pub fn update_player_states (mut query: Query<(&InputBuffer, &mut PlayerMovement)>) {
+  pub fn update_player_states (mut player_inputs: ResMut<PlayerInputs>, mut query: Query<(&InputBuffer, &mut PlayerMovement)>) {
     for (buffer, mut player_movement) in query.iter_mut() {
+      for mapper in player_inputs.local_devices.iter_mut() {
+        if player_movement.player_id == mapper.player_id {
+          mapper.facing_right = player_movement.facing_right;
+        }
+      }
       player_movement.action_state_maintenence();
       player_movement.manage_action_state(buffer);
     }

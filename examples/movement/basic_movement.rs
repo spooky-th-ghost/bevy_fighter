@@ -33,11 +33,11 @@ fn add_hitbox(
   mut commands: Commands,
   box_colors: Res<CollisionBoxColors>, 
   keyboard_input: Res<Input<KeyCode>>,
+  player_inputs: Res<PlayerInputs>,
   query: Query<(&PlayerId, &PlayerMovement, Entity)>,
-  //keyboard_input: Res<Input<KeyCode>>, 
 ) -> () {
   for (player_id, player_movement, entity) in query.iter() {
-    if keyboard_input.just_pressed(KeyCode::Space) {
+    if keyboard_input.just_pressed(player_inputs.local_devices[0].a) {
       spawn_hitbox(
         &mut commands,
         box_colors.hitbox_color,

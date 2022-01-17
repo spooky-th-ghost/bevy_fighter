@@ -59,72 +59,143 @@ impl MotionEvent {
 }
 
 pub fn write_motion_inputs(
+  player_inputs: Res<PlayerInputs>,
   keyboard_input: Res<Input<KeyCode>>, 
   mut motion_writer: EventWriter<MotionEvent>
 ) {
-  let mut h_axis: f32 = 0.0;
-  let mut v_axis: f32 = 0.0;
+  for mapper in player_inputs.local_devices.iter() {
+    let mut h_axis: f32 = 0.0;
+    let mut v_axis: f32 = 0.0;
+    let InputMapper {x_positive, x_negative, y_positive, y_negative, player_id, ..} = mapper;
 
-  if keyboard_input.pressed(KeyCode::A) {
-    h_axis -= 1.0;
+    if keyboard_input.pressed(*x_negative) {
+      h_axis -= 1.0 *  mapper.get_facing_vector();
+    }
+
+    if keyboard_input.pressed(*x_positive) {
+      h_axis += 1.0 * mapper.get_facing_vector();
+    }
+
+    if keyboard_input.pressed(*y_positive) {
+      v_axis = 1.0;
+    }
+
+    if keyboard_input.pressed(*y_negative) {
+      if v_axis == 0.0 {
+        v_axis = -1.0;
+      }
+    }
+
+    let mut motion: u8 = 5;
+
+    if h_axis == 0.0 {
+      if v_axis == 1.0 {
+        motion = 8;
+      }
+
+      if v_axis == -1.0 {
+        motion = 2;
+      }
+    }
+
+    if h_axis == -1.0 {
+      if v_axis == 1.0 {
+        motion = 7;
+      }
+
+      if v_axis == 0.0 {
+        motion = 4;
+      }
+
+      if v_axis == -1.0 {
+        motion = 1;
+      }
+    }
+
+    if h_axis == 1.0 {
+      if v_axis == 1.0 {
+        motion = 9;
+      }
+
+      if v_axis == 0.0 {
+        motion = 6;
+      }
+
+      if v_axis == -1.0 {
+        motion = 3;
+      }
+    }
+    motion_writer.send(MotionEvent::new(motion,*player_id));
   }
-
-  if keyboard_input.pressed(KeyCode::D) {
-    h_axis += 1.0;
-  }
-
-  if keyboard_input.pressed(KeyCode::W) {
-    v_axis = 1.0;
-  }
-
-  if keyboard_input.pressed(KeyCode::S) {
-    if v_axis == 0.0 {
-      v_axis = -1.0;
-    }
-  }
-
-  let mut motion: u8 = 5;
-
-  if h_axis == 0.0 {
-    if v_axis == 1.0 {
-      motion = 8;
-    }
-
-    if v_axis == -1.0 {
-      motion = 2;
-    }
-  }
-
-  if h_axis == -1.0 {
-    if v_axis == 1.0 {
-      motion = 7;
-    }
-
-    if v_axis == 0.0 {
-      motion = 4;
-    }
-
-    if v_axis == -1.0 {
-      motion = 1;
-    }
-  }
-
-  if h_axis == 1.0 {
-    if v_axis == 1.0 {
-      motion = 9;
-    }
-
-    if v_axis == 0.0 {
-      motion = 6;
-    }
-
-    if v_axis == -1.0 {
-      motion = 3;
-    }
-  }
-
-  motion_writer.send(MotionEvent::new(motion,1));
 }
+
+// pub fn write_motion_inputs(
+//   keyboard_input: Res<Input<KeyCode>>, 
+//   mut motion_writer: EventWriter<MotionEvent>
+// ) {
+//   let mut h_axis: f32 = 0.0;
+//   let mut v_axis: f32 = 0.0;
+
+//   if keyboard_input.pressed(KeyCode::A) {
+//     h_axis -= 1.0;
+//   }
+
+//   if keyboard_input.pressed(KeyCode::D) {
+//     h_axis += 1.0;
+//   }
+
+//   if keyboard_input.pressed(KeyCode::W) {
+//     v_axis = 1.0;
+//   }
+
+//   if keyboard_input.pressed(KeyCode::S) {
+//     if v_axis == 0.0 {
+//       v_axis = -1.0;
+//     }
+//   }
+
+//   let mut motion: u8 = 5;
+
+//   if h_axis == 0.0 {
+//     if v_axis == 1.0 {
+//       motion = 8;
+//     }
+
+//     if v_axis == -1.0 {
+//       motion = 2;
+//     }
+//   }
+
+//   if h_axis == -1.0 {
+//     if v_axis == 1.0 {
+//       motion = 7;
+//     }
+
+//     if v_axis == 0.0 {
+//       motion = 4;
+//     }
+
+//     if v_axis == -1.0 {
+//       motion = 1;
+//     }
+//   }
+
+//   if h_axis == 1.0 {
+//     if v_axis == 1.0 {
+//       motion = 9;
+//     }
+
+//     if v_axis == 0.0 {
+//       motion = 6;
+//     }
+
+//     if v_axis == -1.0 {
+//       motion = 3;
+//     }
+//   }
+
+//   motion_writer.send(MotionEvent::new(motion,1));
+// }
 
 pub fn read_motion_inputs(
   mut motion_input_reader: EventReader<MotionEvent>, 
@@ -141,11 +212,12 @@ impl Plugin for MotionInputPlugin {
   fn build(&self, app: &mut App) {
     app
     .add_event::<MotionEvent>()
+    .insert_resource(PlayerInputs::default())
     .add_system_set(
       SystemSet::new()
         .with_run_criteria(FixedTimestep::step(0.01667))
-        .with_system(write_motion_inputs.label("WRITE"))
-        .with_system(read_motion_inputs.after("WRITE"))
+        .with_system(write_motion_inputs.label(FighterSystemLabels::InputWrite))
+        .with_system(read_motion_inputs.after(FighterSystemLabels::InputWrite))
     );
   }
 }

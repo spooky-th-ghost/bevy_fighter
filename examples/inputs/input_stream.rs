@@ -8,8 +8,8 @@ fn main() {
         .add_system_set(
           SystemSet::new()
             .with_run_criteria(FixedTimestep::step(0.01667))
-            .with_system(write_motion_inputs.label("WRITE"))
-            .with_system(read_motion_inputs.after("WRITE"))
+            .with_system(write_motion_inputs.label(FighterSystemLabels::InputWrite))
+            .with_system(read_motion_inputs.after(FighterSystemLabels::InputWrite))
         )
         .run();
 }

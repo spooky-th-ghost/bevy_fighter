@@ -25,6 +25,7 @@ pub mod prelude {
     core::FixedTimestep,
     ui::Val::*,
     utils::HashMap,
+    ecs::schedule::SystemLabel,
     prelude::*
   };
   pub use std::{
