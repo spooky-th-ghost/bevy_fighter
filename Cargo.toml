@@ -1,5 +1,8 @@
 [package]
 name = "bevy_fighter"
+license = "MIT"
+repository = "https://github.com/spooky-th-ghost/bevy_fighter"
+description = "a mildly opinionated bevy plugin to aid in creating 2D fighting games"
 version = "0.1.0"
 edition = "2021"
 
