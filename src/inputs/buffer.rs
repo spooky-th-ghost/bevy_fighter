@@ -28,7 +28,6 @@ impl FighterInputBuffer {
 
   pub fn update(&mut self, event: &FighterInputEvent) {
     self.tick();
-    if event.player_id == 2 {println!("{:?}", event);}
     if event.player_id == self.player_id {
       self.motions.push(event.motion);
       self.pressed.push(event.pressed.clone());

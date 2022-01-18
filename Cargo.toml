@@ -3,7 +3,7 @@ name = "bevy_fighter"
 license = "MIT"
 repository = "https://github.com/spooky-th-ghost/bevy_fighter"
 description = "A mildly opinionated micro-engine for building 2D fighting games with bevy"
-version = "0.1.1"
+version = "0.1.11"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

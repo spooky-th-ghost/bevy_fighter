@@ -5,7 +5,6 @@ pub extern crate lazy_static;
 mod inputs;
 mod movement;
 mod constants;
-mod player;
 mod display;
 mod utils;
 mod animation;
@@ -43,7 +42,6 @@ pub mod prelude {
   pub use crate::inputs::*;
   pub use crate::movement::*;
   pub use crate::constants::*;
-  pub use crate::player::*;
   pub use crate::display::*;
   pub use crate::utils::*;
   pub use crate::animation::*;
