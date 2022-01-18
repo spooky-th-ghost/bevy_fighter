@@ -100,6 +100,7 @@ pub struct PlayerMovement {
 
     pub fn manage_action_state(&mut self, buffer: &FighterInputBuffer) {
       let mut new_state = ActionState::default();
+      
       if !self.get_busy() {
         if self.is_grounded {
           match self.action_state {

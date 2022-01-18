@@ -26,16 +26,16 @@ impl FighterInputBuffer {
     }
   }
 
-  pub fn update(&mut self, input_reader: &mut EventReader<FighterInputEvent>) {
+  pub fn update(&mut self, event: &FighterInputEvent) {
     self.tick();
-    for event in input_reader.iter() {
-      if event.player_id == self.player_id {
-        self.motions.push(event.motion);
-        self.pressed.push(event.pressed.clone());
-        self.just_pressed.push(event.just_pressed.clone());
-        self.current_motion = event.motion;
-      };
+    if event.player_id == 2 {println!("{:?}", event);}
+    if event.player_id == self.player_id {
+      self.motions.push(event.motion);
+      self.pressed.push(event.pressed.clone());
+      self.just_pressed.push(event.just_pressed.clone());
+      self.current_motion = event.motion;
     };
+    
     let (motion_string, command_input) = self.extract_special_motions();
 
     let mut cm_input = String::new();

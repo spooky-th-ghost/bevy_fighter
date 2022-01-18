@@ -187,7 +187,7 @@ pub fn write_fighter_inputs(
     if j_d {just_pressed.push(FighterButtonType::D)}
     if j_e {just_pressed.push(FighterButtonType::E)}
     if j_f {just_pressed.push(FighterButtonType::F)}
-    
+
     input_writer.send(
       FighterInputEvent::new(
         motion,
@@ -204,8 +204,12 @@ pub fn read_fighter_inputs(
   mut input_reader: EventReader<FighterInputEvent>, 
   mut player_inputs: ResMut<PlayerInputs>,
 ) {
-  for buffer in player_inputs.buffers.iter_mut() {
-    buffer.update(&mut input_reader);
+  for event in input_reader.iter() {
+    for buffer in player_inputs.buffers.iter_mut() {
+      if event.player_id == buffer.player_id {
+        buffer.update(event);
+      }
+    };
   };
 }
 
