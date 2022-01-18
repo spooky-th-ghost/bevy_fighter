@@ -135,7 +135,6 @@ pub struct PlayerMovement {
         }
       }
       self.action_state = new_state;
-      println!("{:?}", new_state);
       self.update_velocity_from_state()
     }
 

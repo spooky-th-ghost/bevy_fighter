@@ -4,6 +4,8 @@ fn main() {
   App::new()
     .add_plugins(DefaultPlugins)
     .add_plugin(FighterInputPlugin)
+    .add_plugin(RemoteDevToolsPlugin::new("bevy_fighter", 3030))
+    .add_plugin(FrameTimeDiagnosticsPlugin::default())
     .insert_resource(CollisionBoxColors::new(0.4))
     .add_startup_system(setup)
     //.add_system(read_gamepad_inputs)

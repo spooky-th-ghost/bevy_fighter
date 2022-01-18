@@ -87,12 +87,12 @@ impl InputMapper {
         RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
       };
 
-      let down_pressed = match self.y_positive {
+      let down_pressed = match self.y_negative {
         RawButton::K(keycode) => keyboard_input.pressed(keycode),
         RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
       };
 
-      let up_pressed = match self.y_negative {
+      let up_pressed = match self.y_positive {
         RawButton::K(keycode) => keyboard_input.pressed(keycode),
         RawButton::G(device_id,button_type) => button_input.pressed(GamepadButton(device_id, button_type)),
       };

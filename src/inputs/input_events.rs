@@ -1,14 +1,6 @@
 pub use crate::prelude::*;
 
 #[derive(Debug)]
-pub struct MotionEvent{
-  pub motion: u8,
-  pub player_id: u8,
-  pub special_motion_duration: u8,
-  pub special_motion: Option<CommandType>
-}
-
-#[derive(Debug)]
 pub struct FighterInputEvent{
   pub player_id: u8,
   /// Direction of the input, expressed in numpad notation
@@ -86,101 +78,6 @@ pub enum CommandType {
     BACK_DASH,
     INVITE_HELL
 }
-
-impl MotionEvent {
-  fn new(motion: u8, player_id: u8) -> Self {
-    MotionEvent {
-      motion,
-      player_id,
-      special_motion_duration: 0,
-      special_motion: None
-    }
-  }
-}
-
-// pub fn write_motion_inputs(
-//   player_inputs: Res<PlayerInputs>,
-//   keyboard_input: Res<Input<KeyCode>>, 
-//   button_input: Res<Input<GamepadButton>>,
-//   mut motion_writer: EventWriter<MotionEvent>
-// ) {
-//   for mapper in player_inputs.local_devices.iter() {
-//     let mut h_axis: f32 = 0.0;
-//     let mut v_axis: f32 = 0.0;
-//     let InputMapper { player_id, ..} = mapper;
-    
-//     let InputActionsPressed {right, left, up, down, ..} = mapper.get_pressed_buttons(&keyboard_input, &button_input);
-
-
-//     if left {
-//       h_axis -= 1.0 *  mapper.get_facing_vector();
-//     }
-
-//     if right {
-//       h_axis += 1.0 * mapper.get_facing_vector();
-//     }
-
-//     if up {
-//       v_axis = 1.0;
-//     }
-
-//     if down {
-//       if v_axis == 0.0 {
-//         v_axis = -1.0;
-//       }
-//     }
-
-//     let mut motion: u8 = 5;
-
-//     if h_axis == 0.0 {
-//       if v_axis == 1.0 {
-//         motion = 8;
-//       }
-
-//       if v_axis == -1.0 {
-//         motion = 2;
-//       }
-//     }
-
-//     if h_axis == -1.0 {
-//       if v_axis == 1.0 {
-//         motion = 7;
-//       }
-
-//       if v_axis == 0.0 {
-//         motion = 4;
-//       }
-
-//       if v_axis == -1.0 {
-//         motion = 1;
-//       }
-//     }
-
-//     if h_axis == 1.0 {
-//       if v_axis == 1.0 {
-//         motion = 9;
-//       }
-
-//       if v_axis == 0.0 {
-//         motion = 6;
-//       }
-
-//       if v_axis == -1.0 {
-//         motion = 3;
-//       }
-//     }
-//     motion_writer.send(MotionEvent::new(motion,*player_id));
-//   }
-// }
-
-// pub fn read_motion_inputs(
-//   mut motion_input_reader: EventReader<MotionEvent>, 
-//   mut query: Query<(&mut InputBuffer, &PlayerId)>,
-// ) {
-//   for (mut buffer, pid) in query.iter_mut() {
-//     buffer.update(&mut motion_input_reader, pid.0);
-//   };
-// }
 
 pub fn write_fighter_inputs(
   player_inputs: Res<PlayerInputs>,
