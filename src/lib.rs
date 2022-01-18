@@ -20,7 +20,6 @@ pub mod prelude {
     Result,
     Value
   };
-  pub use bevy_remote_devtools_plugin::RemoteDevToolsPlugin,
   pub use bevy::{
     input::keyboard::KeyboardInput,
     core::FixedTimestep,
