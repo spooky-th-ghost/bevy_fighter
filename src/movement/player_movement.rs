@@ -5,7 +5,7 @@ pub struct PlayerMovement {
     pub busy: u8,
     pub invuln: u8,
     pub armor: u8,
-    pub facing_right: bool,
+    pub facing_vector: f32,
     pub walk_speed: f32,
     pub back_walk_speed: f32,
     pub dash_speed: f32,
@@ -24,7 +24,7 @@ pub struct PlayerMovement {
         busy: 0,
         invuln: 0,
         armor: 0,
-        facing_right: true,
+        facing_vector: 1.0,
         walk_speed: 4.0,
         back_walk_speed: 2.5,
         dash_speed: 8.0,
@@ -52,15 +52,11 @@ pub struct PlayerMovement {
       self.int_force = Some(i_force);
     }
 
-    // Getters
-    pub fn get_facing_vector(&self) -> f32 {
-       if self.facing_right {
-        return 1.0;
-      } else {
-        return -1.0;
-      }
+    pub fn set_facing_vector(&mut self, vector: f32) {
+      self.facing_vector = vector;
     }
 
+    // Getters
     pub fn get_busy(&self) -> bool {
       return self.busy != 0;
     }
@@ -77,7 +73,7 @@ pub struct PlayerMovement {
     }
 
     pub fn execute_backdash(&mut self) {
-      let (bd_i_force, bd_busy) = self.backdash.exec(self.get_facing_vector());
+      let (bd_i_force, bd_busy) = self.backdash.exec(self.facing_vector);
       self.set_i_force(bd_i_force);
       self.set_busy(bd_busy);
     }
@@ -100,7 +96,7 @@ pub struct PlayerMovement {
 
     pub fn manage_action_state(&mut self, buffer: &FighterInputBuffer) {
       let mut new_state = ActionState::default();
-      
+
       if !self.get_busy() {
         if self.is_grounded {
           match self.action_state {
@@ -147,9 +143,9 @@ pub struct PlayerMovement {
 
       match self.action_state {
         ActionState::CROUCHING | ActionState::STANDING => new_velocity = Vec2::ZERO,
-        ActionState::WALKING => new_velocity = Vec2::new(self.walk_speed * self.get_facing_vector(), 0.0),
-        ActionState::BACKWALKING => new_velocity = Vec2::new(-self.back_walk_speed * self.get_facing_vector(), 0.0),
-        ActionState::DASHING => new_velocity = Vec2::new(self.dash_speed * self.get_facing_vector(),0.0),
+        ActionState::WALKING => new_velocity = Vec2::new(self.walk_speed * self.facing_vector, 0.0),
+        ActionState::BACKWALKING => new_velocity = Vec2::new(-self.back_walk_speed * self.facing_vector, 0.0),
+        ActionState::DASHING => new_velocity = Vec2::new(self.dash_speed * self.facing_vector,0.0),
         _ => ()
       }
 
@@ -157,15 +153,12 @@ pub struct PlayerMovement {
     }
   }
 
-  pub fn update_player_states (mut player_inputs: ResMut<PlayerInputs>, mut query: Query<&mut PlayerMovement>) {
+  pub fn update_player_states (player_data: ResMut<PlayerData>, mut query: Query<&mut PlayerMovement>) {
     for mut player_movement in query.iter_mut() {
-      for mapper in player_inputs.local_devices.iter_mut() {
-        if player_movement.player_id == mapper.player_id {
-          mapper.facing_right = player_movement.facing_right;
-        }
-      }
-      for buffer in player_inputs.buffers.iter() {
+      for buffer in player_data.buffers.iter() {
         if buffer.player_id == player_movement.player_id {
+          let facing_vector = player_data.get_facing_vector(&player_movement.player_id);
+          player_movement.set_facing_vector(facing_vector);
           player_movement.manage_action_state(buffer);
         }
       }
@@ -173,10 +166,11 @@ pub struct PlayerMovement {
     }
   }
 
-  pub fn apply_player_velocity(mut query: Query<(&mut Transform, &mut PlayerMovement)>) {
+  pub fn apply_player_velocity(mut player_data: ResMut<PlayerData>,mut query: Query<(&mut Transform, &mut PlayerMovement)>) {
     for (mut transform, mut movement) in query.iter_mut() {
       let tv = movement.target_velo();
-      transform.translation += Vec3::new(tv.x, tv.y, 0.0)  
+      transform.translation += Vec3::new(tv.x, tv.y, 0.0);
+      player_data.set_position(&movement.player_id, transform.translation);
     }
   }
   

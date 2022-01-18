@@ -1,15 +1,38 @@
 use crate::prelude::*;
 
-pub struct PlayerInputs {
-  pub local_devices: Vec<InputMapper>,
-  pub buffers: Vec<FighterInputBuffer>
+pub struct FighterCharacterPosition {
+  pub player_id: u8,
+  position: Vec3
 }
 
-impl Default for PlayerInputs {
+impl FighterCharacterPosition {
+  pub fn new(player_id: u8, position: Vec3) -> Self {
+    FighterCharacterPosition {
+      player_id,
+      position,
+    }
+  }
+
+  pub fn set_position(&mut self, position: Vec3) {
+    self.position = position;
+  }
+
+  pub fn get_position(&self) -> Vec3 {
+    return self.position;
+  }
+}
+
+pub struct PlayerData {
+  pub local_devices: Vec<FighterInputMapper>,
+  pub buffers: Vec<FighterInputBuffer>,
+  pub positions: Vec<FighterCharacterPosition>
+}
+
+impl Default for PlayerData {
   fn default() -> Self {
-    PlayerInputs {
+    PlayerData {
       local_devices: vec![
-        InputMapper {
+        FighterInputMapper {
             player_id: 1,
             a: RawButton::G(Gamepad(0),GamepadButtonType::West),
             b: RawButton::G(Gamepad(0),GamepadButtonType::North),
@@ -23,9 +46,8 @@ impl Default for PlayerInputs {
             x_negative: RawButton::G(Gamepad(0),GamepadButtonType::DPadLeft),
             y_positive: RawButton::G(Gamepad(0),GamepadButtonType::DPadUp),
             y_negative: RawButton::G(Gamepad(0),GamepadButtonType::DPadDown),
-            facing_right: false,
         },
-          InputMapper {
+          FighterInputMapper {
             player_id: 2,
             a: RawButton::K(KeyCode::Y),
             b: RawButton::K(KeyCode::U),
@@ -39,18 +61,45 @@ impl Default for PlayerInputs {
             x_negative: RawButton::K(KeyCode::Q),
             y_positive: RawButton::K(KeyCode::Space),
             y_negative: RawButton::K(KeyCode::W),
-            facing_right: false,
         },
       ],
       buffers: vec![
         FighterInputBuffer::new(1),
         FighterInputBuffer::new(2),
+      ],
+      positions: vec![
+        FighterCharacterPosition::new(1,Vec3::new(-50.0, 0.0, 0.0)),
+        FighterCharacterPosition::new(2,Vec3::new(50.0, 0.0, 0.0)),
       ]
     }
   }
 }
 
-pub struct InputMapper {
+impl PlayerData {
+  pub fn get_facing_vector(&self, player_id: &u8) -> f32 {
+    let p1_x_pos = self.positions[0].get_position().x;
+    let p2_x_pos = self.positions[1].get_position().x;
+
+    if p1_x_pos > p2_x_pos {
+      if *player_id == 1 {
+        return -1.0;
+      } else {
+        return 1.0;
+      }
+    } else {
+      if *player_id == 1 {
+        return 1.0;
+      } else {
+        return -1.0;
+      }
+    }
+  }
+
+  pub fn set_position(&mut self, player_id: &u8, position: Vec3) {
+    self.positions[(*player_id -1) as usize].set_position(position);
+  }
+}
+pub struct FighterInputMapper {
   pub player_id: u8,
   pub a: RawButton,
   pub b: RawButton,
@@ -64,18 +113,9 @@ pub struct InputMapper {
   pub x_negative: RawButton,
   pub y_positive: RawButton,
   pub y_negative: RawButton,
-  pub facing_right: bool
 }
 
-impl InputMapper {
-    pub fn get_facing_vector(&self) -> f32 {
-       if self.facing_right {
-        return 1.0;
-      } else {
-        return -1.0;
-      }
-    }
-
+impl FighterInputMapper {
     pub fn get_pressed_buttons(&self, keyboard_input: &Res<Input<KeyCode>>, button_input: &Res<Input<GamepadButton>>) -> InputActionsPressed {
       let right_pressed = match self.x_positive {
         RawButton::K(keycode) => keyboard_input.pressed(keycode),
@@ -249,4 +289,71 @@ pub enum RawButton {
   K(KeyCode),
   G(Gamepad,GamepadButtonType)
 }
+
+
+// pub struct FighterPlayerController {
+//   player_id: u8,
+//   mapper: FighterInputMapper,
+//   buffer: FighterInputBuffer,
+//   position: FighterCharacterPosition,
+//   starting_position: Vec3,
+// }
+
+// pub struct GlobalPlayerData {
+//   player_1: FighterPlayerController,
+//   player_2: FighterPlayerController,
+// }
+
+// impl Default for GlobalPlayerData {
+//   fn default() -> Self {
+//     GlobalPlayerData {
+//       player_1: FighterPlayerController {
+//         player_id: 1,
+//         mapper: 
+//           FighterInputMapper {
+//             player_id: 1,
+//             a: RawButton::G(Gamepad(0),GamepadButtonType::West),
+//             b: RawButton::G(Gamepad(0),GamepadButtonType::North),
+//             c: RawButton::G(Gamepad(0),GamepadButtonType::RightTrigger),
+//             d: RawButton::G(Gamepad(0),GamepadButtonType::South),
+//             e: RawButton::G(Gamepad(0),GamepadButtonType::East),
+//             f: RawButton::G(Gamepad(0),GamepadButtonType::RightTrigger2),
+//             macro_1: RawButton::G(Gamepad(0),GamepadButtonType::LeftTrigger),
+//             macro_2: RawButton::G(Gamepad(0),GamepadButtonType::LeftTrigger2),
+//             x_positive: RawButton::G(Gamepad(0),GamepadButtonType::DPadRight),
+//             x_negative: RawButton::G(Gamepad(0),GamepadButtonType::DPadLeft),
+//             y_positive: RawButton::G(Gamepad(0),GamepadButtonType::DPadUp),
+//             y_negative: RawButton::G(Gamepad(0),GamepadButtonType::DPadDown),
+//             facing_right: false,
+//           },
+//         buffer: FighterInputBuffer::new(1),
+//         position: FighterCharacterPosition::new(1, Vec3::new(-50.0,0.0,0.0)),
+//         starting_position: Vec3::new(-50.0,0.0,0.0)
+//       },
+//       player_2: FighterPlayerController {
+//         player_id: 2,
+//         mapper:
+//           FighterInputMapper {
+//             player_id: 2,
+//             a: RawButton::K(KeyCode::Y),
+//             b: RawButton::K(KeyCode::U),
+//             c: RawButton::K(KeyCode::I),
+//             d: RawButton::K(KeyCode::G),
+//             e: RawButton::K(KeyCode::H),
+//             f: RawButton::K(KeyCode::J),
+//             macro_1: RawButton::K(KeyCode::O),
+//             macro_2: RawButton::K(KeyCode::K),
+//             x_positive: RawButton::K(KeyCode::E),
+//             x_negative: RawButton::K(KeyCode::Q),
+//             y_positive: RawButton::K(KeyCode::Space),
+//             y_negative: RawButton::K(KeyCode::W),
+//             facing_right: false,
+//           },
+//         buffer: FighterInputBuffer::new(2),
+//         position: FighterCharacterPosition::new(2, Vec3::new(50.0,0.0,0.0)),
+//         starting_position: Vec3::new(50.0,0.0,0.0)
+//       }
+//     }
+//   }
+// }
 

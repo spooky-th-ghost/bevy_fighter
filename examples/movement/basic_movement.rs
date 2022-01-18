@@ -36,11 +36,11 @@ fn add_hitbox(
   box_colors: Res<CollisionBoxColors>, 
   keyboard_input: Res<Input<KeyCode>>,
   button_input: Res<Input<GamepadButton>>,
-  player_inputs: Res<PlayerInputs>,
+  player_data: Res<PlayerData>,
   query: Query<(&PlayerMovement, Entity)>,
 ) -> () {
   for (player_movement, entity) in query.iter() {
-    for mapper in player_inputs.local_devices.iter() {
+    for mapper in player_data.local_devices.iter() {
       if mapper.player_id == player_movement.player_id {
         let InputActionsPressed {a, ..} = mapper.get_just_pressed_buttons(&keyboard_input, &button_input);
 
@@ -51,7 +51,7 @@ fn add_hitbox(
             entity,
             player_movement.player_id,
             Vec2::new(40.0,20.0),
-            Vec2::new(15.0*player_movement.get_facing_vector(), 25.0),
+            Vec2::new(15.0*player_movement.facing_vector, 25.0),
             Hitbox::new(
               player_movement.player_id,
               false,
@@ -86,7 +86,7 @@ fn setup(
       })
       .insert(PlayerMovement {
         player_id: 1,
-        facing_right: true,
+        facing_vector: 1.0,
         ..Default::default()
       });
 
@@ -102,7 +102,7 @@ fn setup(
       })
       .insert(PlayerMovement {
         player_id: 2,
-        facing_right: false,
+        facing_vector: -1.0,
         ..Default::default()
       });
       //.id();

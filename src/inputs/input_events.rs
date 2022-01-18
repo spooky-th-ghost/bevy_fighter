@@ -80,15 +80,15 @@ pub enum CommandType {
 }
 
 pub fn write_fighter_inputs(
-  player_inputs: Res<PlayerInputs>,
+  player_data: Res<PlayerData>,
   keyboard_input: Res<Input<KeyCode>>, 
   button_input: Res<Input<GamepadButton>>,
   mut input_writer: EventWriter<FighterInputEvent>
 ) {
-  for mapper in player_inputs.local_devices.iter() {
+  for mapper in player_data.local_devices.iter() {
     let mut h_axis: f32 = 0.0;
     let mut v_axis: f32 = 0.0;
-    let InputMapper { player_id, ..} = mapper;
+    let FighterInputMapper { player_id, ..} = mapper;
     
     let InputActionsPressed {
       right, 
@@ -114,11 +114,11 @@ pub fn write_fighter_inputs(
 
 
     if left {
-      h_axis -= 1.0 *  mapper.get_facing_vector();
+      h_axis -= 1.0 * player_data.get_facing_vector(player_id);
     }
 
     if right {
-      h_axis += 1.0 * mapper.get_facing_vector();
+      h_axis += 1.0 * player_data.get_facing_vector(player_id);
     }
 
     if up {
@@ -202,10 +202,10 @@ pub fn write_fighter_inputs(
 
 pub fn read_fighter_inputs(
   mut input_reader: EventReader<FighterInputEvent>, 
-  mut player_inputs: ResMut<PlayerInputs>,
+  mut player_data: ResMut<PlayerData>,
 ) {
   for event in input_reader.iter() {
-    for buffer in player_inputs.buffers.iter_mut() {
+    for buffer in player_data.buffers.iter_mut() {
       if event.player_id == buffer.player_id {
         buffer.update(event);
       }
@@ -219,7 +219,7 @@ impl Plugin for FighterInputPlugin {
   fn build(&self, app: &mut App) {
     app
     .add_event::<FighterInputEvent>()
-    .insert_resource(PlayerInputs::default())
+    .insert_resource(PlayerData::default())
     .add_system_set(
       SystemSet::new()
         .with_run_criteria(FixedTimestep::step(0.01667))
