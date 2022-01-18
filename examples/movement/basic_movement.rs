@@ -4,7 +4,8 @@ fn main() {
   App::new()
     .add_plugins(DefaultPlugins)
     .add_plugin(FighterInputPlugin)
-    .add_plugin(FrameTimeDiagnosticsPlugin::default())
+    // .add_plugin(LogDiagnosticsPlugin::default())
+    // .add_plugin(FrameTimeDiagnosticsPlugin::default())
     .insert_resource(CollisionBoxColors::new(0.4))
     .add_startup_system(setup)
     //.add_system(read_gamepad_inputs)
@@ -93,34 +94,54 @@ fn setup(
     coms.spawn_bundle(OrthographicCameraBundle::new_2d());
     coms.spawn_bundle(UiCameraBundle::default());
 
-    let player = coms
+    coms
       .spawn_bundle(SpriteBundle {
         sprite: Sprite{
-          color: Color::RED,
+          color: Color::TEAL,
           custom_size: Some(Vec2::new(30.0, 60.0)),
           ..Default::default()
         },
-        transform: Transform::default(),
+        transform: Transform::from_xyz(-40.0, 0.0, 0.0),
         ..Default::default()
       })
-      .insert(PlayerMovement::new())
-      .id();
+      .insert(PlayerMovement {
+        player_id: 1,
+        facing_right: true,
+        ..Default::default()
+      });
 
-    let hurtbox = coms
+    coms
       .spawn_bundle(SpriteBundle {
         sprite: Sprite{
-          color: box_colors.hurtbox_color,
-          custom_size: Some(Vec2::new(35.0, 35.0)),
+          color: Color::INDIGO,
+          custom_size: Some(Vec2::new(30.0, 60.0)),
           ..Default::default()
         },
-        transform: Transform::from_xyz(0.0, -12.5, 1.0),
+        transform: Transform::from_xyz(40.0, 0.0, 0.0),
         ..Default::default()
       })
-      .insert(Hurtbox {
-        player_id: 1,
+      .insert(PlayerMovement {
+        player_id: 2,
+        facing_right: false,
         ..Default::default()
-      })
-      .id();
+      });
+      //.id();
+
+    // let hurtbox = coms
+    //   .spawn_bundle(SpriteBundle {
+    //     sprite: Sprite{
+    //       color: box_colors.hurtbox_color,
+    //       custom_size: Some(Vec2::new(35.0, 35.0)),
+    //       ..Default::default()
+    //     },
+    //     transform: Transform::from_xyz(0.0, -12.5, 1.0),
+    //     ..Default::default()
+    //   })
+    //   .insert(Hurtbox {
+    //     player_id: 1,
+    //     ..Default::default()
+    //   })
+    //   .id();
     
-    coms.entity(player).push_children(&[hurtbox]);
+    // coms.entity(player).push_children(&[hurtbox]);
 }

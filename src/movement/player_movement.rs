@@ -1,30 +1,30 @@
 pub use crate::prelude::*;
 #[derive(Component)]
 pub struct PlayerMovement {
-    player_id: u8,
-    busy: u8,
-    invuln: u8,
-    armor: u8,
-    facing_right: bool,
-    walk_speed: f32,
-    back_walk_speed: f32,
-    dash_speed: f32,
-    velocity: Vec2,
-    gravity: f32,
-    is_grounded: bool,
-    action_state: ActionState,
-    int_force: Option<InterpolatedForce>,
-    backdash: Box<dyn Backdash>
+    pub player_id: u8,
+    pub busy: u8,
+    pub invuln: u8,
+    pub armor: u8,
+    pub facing_right: bool,
+    pub walk_speed: f32,
+    pub back_walk_speed: f32,
+    pub dash_speed: f32,
+    pub velocity: Vec2,
+    pub gravity: f32,
+    pub is_grounded: bool,
+    pub action_state: ActionState,
+    pub int_force: Option<InterpolatedForce>,
+    pub backdash: Box<dyn Backdash>
   }
-  
-  impl PlayerMovement {
-    pub fn new() -> Self {
+
+  impl Default for PlayerMovement {
+    fn default() -> Self {
       PlayerMovement{
-        player_id: 1,
+        player_id: 0,
         busy: 0,
         invuln: 0,
         armor: 0,
-        facing_right: false,
+        facing_right: true,
         walk_speed: 4.0,
         back_walk_speed: 2.5,
         dash_speed: 8.0,
@@ -36,6 +36,9 @@ pub struct PlayerMovement {
         backdash: Box::new(BasicBackdash::new(25.0,20,20))
       }
     }
+  }
+  
+  impl PlayerMovement {
     // Setters
     pub fn set_action_state(&mut self, action_state: ActionState) {
       self.action_state = action_state

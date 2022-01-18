@@ -26,7 +26,10 @@ pub mod prelude {
     ui::Val::*,
     utils::HashMap,
     ecs::schedule::SystemLabel,
-    diagnostic::FrameTimeDiagnosticsPlugin,
+    diagnostic::{
+      FrameTimeDiagnosticsPlugin, 
+      LogDiagnosticsPlugin
+    },
     prelude::*
   };
   pub use std::{
