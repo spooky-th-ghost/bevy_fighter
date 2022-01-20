@@ -9,6 +9,7 @@ mod display;
 mod utils;
 mod animation;
 mod collision;
+mod fighter_plugin;
 
 pub mod prelude {
   // external crates
@@ -46,4 +47,5 @@ pub mod prelude {
   pub use crate::utils::*;
   pub use crate::animation::*;
   pub use crate::collision::*;
+  pub use crate::fighter_plugin::*;
   }

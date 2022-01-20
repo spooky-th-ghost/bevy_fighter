@@ -3,19 +3,10 @@ use bevy_fighter::prelude::*;
 fn main() {
   App::new()
     .add_plugins(DefaultPlugins)
-    .add_plugin(FighterInputPlugin)
+    .add_plugin(FighterPlugin)
     // .add_plugin(LogDiagnosticsPlugin::default())
     // .add_plugin(FrameTimeDiagnosticsPlugin::default())
-    .insert_resource(CollisionBoxColors::new(0.4))
     .add_startup_system(setup)
-    .add_system_set(
-      SystemSet::new()
-        .with_run_criteria(FixedTimestep::step(0.01667))
-        .with_system(update_player_states)
-        .with_system(apply_player_velocity)
-        .with_system(add_hitbox)
-        .with_system(manage_hitboxes)
-    )
     .run();
 }
 

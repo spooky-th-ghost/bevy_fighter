@@ -1,7 +1,7 @@
 use lerp::Lerp;
 pub use crate::prelude::*;
 
-trait CustomLerp {
+pub trait CustomLerp {
   fn custom_lerp(&self, target: Self, t: f32) -> Self;
 }
 
@@ -57,7 +57,7 @@ impl InterpolatedForce {
 }
 
 /// States representing all possible player actions
-#[derive(Clone,Copy, Debug)]
+#[derive(Clone,Copy, Debug, PartialEq)]
 pub enum ActionState {
   DASHING,
   WALKING,
@@ -66,7 +66,8 @@ pub enum ActionState {
   BLOCKING,
   CROUCHBLOCKING,
   CROUCHING,
-  JUMPING,
+  JUMPSQUAT,
+  AIRBORNE,
   JUGGLE,
   STANDING,
   BACKDASHING 

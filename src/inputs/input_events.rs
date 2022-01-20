@@ -213,21 +213,5 @@ pub fn read_fighter_inputs(
   };
 }
 
-pub struct FighterInputPlugin;
-
-impl Plugin for FighterInputPlugin {
-  fn build(&self, app: &mut App) {
-    app
-    .add_event::<FighterInputEvent>()
-    .insert_resource(PlayerData::default())
-    .add_system_set(
-      SystemSet::new()
-        .with_run_criteria(FixedTimestep::step(0.01667))
-        .with_system(write_fighter_inputs.label(FighterSystemLabels::InputWrite))
-        .with_system(read_fighter_inputs.after(FighterSystemLabels::InputWrite))
-    );
-  }
-}
-
 
 
