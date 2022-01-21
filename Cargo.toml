@@ -19,17 +19,13 @@ lazy_static = "1.4.0"
 lerp = { version = "0.4", features = ["derive"] }
 
 [profile.dev]
-opt-level = 1
+opt-level = 0
 
 [profile.dev.package."*"]
-opt-level = 3
+opt-level = 0
 
 [profile.release]
 lto = "thin"
-
-[[example]]
-name = "input_stream"
-path = "examples/inputs/input_stream.rs"
 
 [[example]]
 name = "basic_movement"

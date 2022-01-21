@@ -10,6 +10,7 @@ pub struct FighterInputBuffer {
   pub command_duration: u8,
   pub command_type: Option<CommandType>,
   pub current_motion: u8,
+  pub previous_motion: u8
 }
 
 impl FighterInputBuffer {
@@ -22,7 +23,8 @@ impl FighterInputBuffer {
       command_priority: 0,
       command_duration: 0,
       command_type: None,
-      current_motion: 5
+      current_motion: 5,
+      previous_motion: 5,
     }
   }
 
@@ -32,6 +34,7 @@ impl FighterInputBuffer {
       self.motions.push(event.motion);
       self.pressed.push(event.pressed.clone());
       self.just_pressed.push(event.just_pressed.clone());
+      self.previous_motion = self.current_motion;
       self.current_motion = event.motion;
     };
     

@@ -70,7 +70,9 @@ pub enum ActionState {
   AIRBORNE,
   JUGGLE,
   STANDING,
-  BACKDASHING 
+  BACKDASHING,
+  AIR_DASHING,
+  AIR_BACKDASHING 
 }
 
 impl Default for ActionState {

@@ -14,6 +14,8 @@ pub struct PlayerMovement {
     pub jump_height: f32,
     pub jumpsquat: u8,
     pub is_grounded: bool,
+    pub air_jumps: u8,
+    pub air_jumps_remaining: u8,
     pub action_state: ActionState,
     pub int_force: Option<InterpolatedForce>,
     pub backdash: Box<dyn Backdash>,
@@ -36,6 +38,8 @@ pub struct PlayerMovement {
         jump_height: 15.0,
         jumpsquat: 3,
         is_grounded: true,
+        air_jumps: 1,
+        air_jumps_remaining: 1,
         action_state: ActionState::default(),
         int_force: None,
         backdash: Box::new(BasicBackdash::new(25.0,20,20)),
@@ -81,12 +85,28 @@ pub struct PlayerMovement {
       self.busy = self.jumpsquat + 10;
     }
 
+    pub fn buffer_air_jump(&mut self, motion: u8) {
+      let x_velocity = match motion {
+        7 => self.facing_vector * (-self.back_walk_speed*2.0),
+        9 => self.facing_vector * self.walk_speed,
+        _ => 0.0
+      };
+      self.jumpdata = Some(JumpData::new(x_velocity, 1, false));
+      self.busy = 5;
+      self.air_jumps_remaining -= 1;
+    }
+
     pub fn execute_jump(&mut self) {
       if let Some(jd) = self.jumpdata.as_mut() {
         if jd.squat > 0 {
           jd.tick();
         } else {
-          self.velocity = Vec2::new(jd.x_velocity, self.jump_height);
+          let jumpheight = if self.is_grounded {
+            self.jump_height
+          } else {
+            self.jump_height * 0.75
+          };
+          self.velocity = Vec2::new(jd.x_velocity, jumpheight);
           self.is_grounded = false;
           self.jumpdata = None;
           self.action_state = ActionState::AIRBORNE;
@@ -170,6 +190,24 @@ pub struct PlayerMovement {
             _ => ()
           }
         } else {
+          if let Some(ct) = buffer.command_type {
+            match ct {
+              CommandType::BACK_DASH => {
+                self.execute_backdash()
+              }
+              _ => ()
+            }               
+          }
+          if buffer.current_motion != buffer.previous_motion {
+            match buffer.current_motion {
+              7 | 8 | 9 => {
+                if self.air_jumps_remaining > 0 {
+                  self.buffer_air_jump(buffer.current_motion);
+                }
+              },
+              _ => ()
+            }
+          }
           new_state = ActionState::AIRBORNE;
         }
         self.action_state = new_state;
@@ -211,6 +249,7 @@ pub struct PlayerMovement {
       if transform.translation.y < 0.0 {
         transform.translation.y = 0.0;
         movement.is_grounded = true;
+        movement.air_jumps_remaining = 1;
       }
       player_data.set_position(&movement.player_id, transform.translation);
     }
@@ -236,4 +275,6 @@ impl JumpData {
     self.squat = countdown(self.squat);
   }
 }
+
+
   
