@@ -18,6 +18,14 @@ phf = { version = "0.9", features = ["macros"] }
 lazy_static = "1.4.0"
 lerp = { version = "0.4", features = ["derive"] }
 
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+lto = "thin"
 
 [[example]]
 name = "input_stream"
