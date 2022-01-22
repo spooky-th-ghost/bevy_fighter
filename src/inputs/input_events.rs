@@ -2,7 +2,7 @@ pub use crate::prelude::*;
 
 #[derive(Debug)]
 pub struct FighterInputEvent{
-  pub player_id: u8,
+  pub player_id: PlayerId,
   /// Direction of the input, expressed in numpad notation
   pub motion: u8,
   /// Any command motion found in the input event
@@ -18,7 +18,7 @@ pub struct FighterInputEvent{
 impl FighterInputEvent{
   fn new(
     motion: u8, 
-    player_id: u8, 
+    player_id: PlayerId, 
     pressed: Vec<FighterButtonType>, 
     just_pressed: Vec<FighterButtonType>
   ) -> Self {

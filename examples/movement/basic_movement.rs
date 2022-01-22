@@ -22,40 +22,40 @@ fn manage_hitboxes(
   }
 }
 
-fn add_hitbox(
-  mut commands: Commands,
-  box_colors: Res<CollisionBoxColors>, 
-  keyboard_input: Res<Input<KeyCode>>,
-  button_input: Res<Input<GamepadButton>>,
-  player_data: Res<PlayerData>,
-  query: Query<(&PlayerMovement, Entity)>,
-) -> () {
-  for (player_movement, entity) in query.iter() {
-    for mapper in player_data.local_devices.iter() {
-      if mapper.player_id == player_movement.player_id {
-        let InputActionsPressed {a, ..} = mapper.get_just_pressed_buttons(&keyboard_input, &button_input);
+// fn add_hitbox(
+//   mut commands: Commands,
+//   box_colors: Res<CollisionBoxColors>, 
+//   keyboard_input: Res<Input<KeyCode>>,
+//   button_input: Res<Input<GamepadButton>>,
+//   player_data: Res<PlayerData>,
+//   query: Query<(&PlayerMovement, Entity)>,
+// ) -> () {
+//   for (player_movement, entity) in query.iter() {
+//     for mapper in player_data.local_devices.iter() {
+//       if mapper.player_id == player_movement.player_id {
+//         let InputActionsPressed {a, ..} = mapper.get_just_pressed_buttons(&keyboard_input, &button_input);
 
-        if a {
-          spawn_hitbox(
-            &mut commands,
-            box_colors.hitbox_color,
-            entity,
-            player_movement.player_id,
-            Vec2::new(40.0,20.0),
-            Vec2::new(15.0*player_movement.facing_vector, 25.0),
-            Hitbox::new(
-              player_movement.player_id,
-              false,
-              HitboxData::jab(5) ,
-              AttackProperty::MID,
-              50
-            )
-          );
-        }
-      }
-    }
-  }
-}
+//         if a {
+//           spawn_hitbox(
+//             &mut commands,
+//             box_colors.hitbox_color,
+//             entity,
+//             player_movement.player_id,
+//             Vec2::new(40.0,20.0),
+//             Vec2::new(15.0*player_movement.facing_vector, 25.0),
+//             Hitbox::new(
+//               player_movement.player_id,
+//               false,
+//               HitboxData::jab(5) ,
+//               AttackProperty::MID,
+//               50
+//             )
+//           );
+//         }
+//       }
+//     }
+//   }
+// }
 
 fn setup(
     mut coms: Commands,
@@ -76,7 +76,7 @@ fn setup(
         ..Default::default()
       })
       .insert(PlayerMovement {
-        player_id: 1,
+        player_id: PlayerId::P1,
         facing_vector: 1.0,
         ..Default::default()
       });
@@ -92,7 +92,7 @@ fn setup(
         ..Default::default()
       })
       .insert(PlayerMovement {
-        player_id: 2,
+        player_id: PlayerId::P2,
         facing_vector: -1.0,
         ..Default::default()
       });

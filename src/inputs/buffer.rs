@@ -5,7 +5,7 @@ pub struct FighterInputBuffer {
   pub motions: Vec<u8>,
   pub pressed: Vec<Vec<FighterButtonType>>,
   pub just_pressed: Vec<Vec<FighterButtonType>>,
-  pub player_id: u8,
+  pub player_id: PlayerId,
   pub command_priority: u8,
   pub command_duration: u8,
   pub command_type: Option<CommandType>,
@@ -14,7 +14,7 @@ pub struct FighterInputBuffer {
 }
 
 impl FighterInputBuffer {
-  pub fn new(player_id: u8) -> Self {
+  pub fn new(player_id: PlayerId) -> Self {
     FighterInputBuffer {
       motions: Vec::new(),
       pressed: Vec::new(),

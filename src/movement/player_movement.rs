@@ -1,7 +1,7 @@
 pub use crate::prelude::*;
 #[derive(Component)]
 pub struct PlayerMovement {
-    pub player_id: u8,
+    pub player_id: PlayerId,
     pub busy: u8,
     pub invuln: u8,
     pub armor: u8,
@@ -25,7 +25,7 @@ pub struct PlayerMovement {
   impl Default for PlayerMovement {
     fn default() -> Self {
       PlayerMovement{
-        player_id: 0,
+        player_id: PlayerId::P1,
         busy: 0,
         invuln: 0,
         armor: 0,
