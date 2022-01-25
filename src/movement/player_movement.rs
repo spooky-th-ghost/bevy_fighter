@@ -216,7 +216,7 @@ pub struct PlayerMovement {
     }
 
     pub fn update_velocity_from_state (&mut self) {
-      let mut new_velocity = Vec2::ZERO;
+      let mut new_velocity:Vec2;
 
       match self.action_state {
         ActionState::WALKING => new_velocity = Vec2::new(self.walk_speed * self.facing_vector, 0.0),

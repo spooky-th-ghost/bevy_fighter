@@ -7,7 +7,7 @@ pub enum PlayerId {
   P2
 }
 
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Clone, Copy, Debug)]
 pub struct CharacterStatus {
   pub action_state: ActionState,
   pub busy: u8,
@@ -30,6 +30,12 @@ impl CharacterStatus {
     self.busy = busy;
   }
 
+  pub fn land(&mut self) {
+    self.is_grounded = true;
+    self.air_jumps_remaining = self.air_jumps;
+    self.action_state = ActionState::STANDING;
+  }
+
   // Getters
 
   /// Get a players ActionState
@@ -43,7 +49,7 @@ impl CharacterStatus {
   }
 
   pub fn get_is_busy(&self) -> bool {
-    return self.busy == 0;
+    return self.busy != 0;
   }
 
   // Logic
@@ -86,6 +92,48 @@ impl CharacterBody {
   pub fn set_facing_vector(&mut self, facing_vector: f32) {
     self.facing_vector = facing_vector;
   }
+
+  /// Set the players velocity
+  pub fn set_velocity(&mut self, velocity: Vec2) {
+    self.velocity = velocity;
+  }
+
+  /// Set the players current interpolated force
+  pub fn set_i_force(&mut self, int_force: InterpolatedForce) {
+    self.int_force = Some(int_force);
+  }
+
+  pub fn get_target_velo(&mut self) -> Vec2 {
+    if let Some(i_force) = self.int_force.as_mut() {
+      let i_force_velo = i_force.update();
+      if i_force.is_finished() {self.int_force = None;}
+      return i_force_velo;
+    } else {
+      return self.velocity;
+    }
+  }
+
+  pub fn execute_jump(&mut self, status: &mut CharacterStatus) {
+    if let Some(jd) = self.jumpdata.as_mut() {
+      if jd.squat > 0 {
+        jd.tick();
+      } else {
+        let jumpheight = if status.get_is_grounded() {
+          self.jump_height
+        } else {
+          self.jump_height * 0.75
+        };
+        self.velocity = Vec2::new(jd.x_velocity, jumpheight);
+        status.is_grounded = false;
+        self.jumpdata = None;
+        status.set_action_state(ActionState::AIRBORNE);
+      }
+    }
+  }
+
+  pub fn exec_backdash(&self) -> (InterpolatedForce, u8) {
+    return self.backdash.exec(self.facing_vector);
+  }
 }
 
 impl Default for CharacterBody {
@@ -101,33 +149,6 @@ impl Default for CharacterBody {
       int_force: None,
       backdash: Box::new(BasicBackdash::new(25.0,20,20)),
       jumpdata: None,
-    }
-  }
-}
-
-#[derive(Bundle)]
-pub struct CharacterBundle {
-  pub player_id: PlayerId,
-  pub sprite: Sprite,
-  pub transform: Transform,
-  pub global_transform: GlobalTransform,
-  pub visibility: Visibility,
-  pub status: CharacterStatus,
-  pub body: CharacterBody,
-}
-
-impl Default for CharacterBundle {
-  fn default() -> Self {
-    CharacterBundle {
-      player_id: PlayerId::P1,
-      sprite: Sprite {
-        ..Default::default()
-      },
-      transform: Transform::default(),
-      global_transform: GlobalTransform::default(),
-      visibility: Visibility::default(),
-      status: CharacterStatus::default(),
-      body: CharacterBody::default(),
     }
   }
 }
@@ -151,120 +172,210 @@ impl SpawnPlayer for Commands<'_, '_> {
       )
     };
 
-    self.spawn_bundle(
-      CharacterBundle {
-        player_id,
-        sprite: Sprite {
-          color,
-          custom_size: Some(Vec2::new(30.0, 60.0)),
-          ..Default::default()
-        },
+    self.spawn_bundle(SpriteBundle {
+        sprite: Sprite{
+        color,
+        custom_size: Some(Vec2::new(30.0, 60.0)),
+        ..Default::default()
+      },
         transform,
-        global_transform: GlobalTransform::default(),
-        visibility: Visibility::default(),
-        status: CharacterStatus::default(),
-        body: CharacterBody{
-          facing_vector,
-            ..Default::default()
-        },
-      }
-    );
+        ..Default::default()
+      })
+      .insert(player_id)
+      .insert(CharacterStatus::default())
+      .insert( CharacterBody {
+        facing_vector,
+        ..Default::default()
+      });
   }
 }
 
-pub fn calculate_action_state(status: CharacterStatus, buffer:&FighterInputBuffer) -> ActionState {
+pub fn calculate_action_state(status: CharacterStatus, buffer:&FighterInputBuffer) -> (ActionState, Option<MovementEventType>) {
   if !status.get_is_busy() {
     if status.get_is_grounded() {
-      match status.get_action_state() {
-        ActionState::WALKING | ActionState::BACKWALKING | ActionState::CROUCHING | ActionState::STANDING => {
-          match buffer.current_motion {
-            5 => return ActionState::STANDING,
-            6 => return ActionState::WALKING,
-            4 => return ActionState::BACKWALKING,
-            1 | 2 | 3 => return ActionState::CROUCHING,
-            7 | 8 | 9 => return ActionState::JUMPSQUAT,
-            _ => ()
+      match buffer.current_motion {
+        7 | 8 | 9 => {
+          match status.get_action_state() {
+            ActionState::DASHING =>  return (ActionState::JUMPSQUAT, Some(MovementEventType::DASHJUMP)),
+            _ => return (ActionState::JUMPSQUAT, Some(MovementEventType::JUMP))
           }
+        },
+        _ => ()
+      }
+      match status.get_action_state() {
+        ActionState::WALKING | ActionState::BACKWALKING | ActionState::CROUCHING | ActionState::STANDING | ActionState::BACKDASHING => {
           if let Some(ct) = buffer.command_type {
             match ct {
-              CommandType::DASH => return ActionState::DASHING,
-              CommandType::BACK_DASH => return ActionState::BACKDASHING,
+              CommandType::DASH => return (ActionState::DASHING, None),
+              CommandType::BACK_DASH => return (ActionState::BACKDASHING,Some(MovementEventType::BACKDASH)),
               _ => ()
             }               
+          } else {
+            match buffer.current_motion {
+              5 => return (ActionState::STANDING, None),
+              6 => return (ActionState::WALKING, None),
+              4 => return (ActionState::BACKWALKING, None),
+              1 | 2 | 3 => return (ActionState::CROUCHING, None),
+              7 | 8 | 9 => return (ActionState::JUMPSQUAT, Some(MovementEventType::JUMP)),
+              _ => ()
+            }
           }
         },
         ActionState::DASHING => {
-          match buffer.current_motion {
-            5 => return ActionState::STANDING,
-            6 => return ActionState::DASHING,
-            4 => return ActionState::BACKWALKING,
-            1 | 2 | 3 => return ActionState::CROUCHING,
-            7 | 8 | 9 => return ActionState::JUMPSQUAT,
-            _ => ()
+          if let Some(ct) = buffer.command_type {
+            match ct {
+              CommandType::DASH => return (ActionState::DASHING, None),
+              CommandType::BACK_DASH => return (ActionState::BACKDASHING,Some(MovementEventType::BACKDASH)),
+              _ => ()
+            }               
+          } else {
+            match buffer.current_motion {
+              5 => return (ActionState::STANDING, None),
+              6 => return (ActionState::DASHING, None),
+              4 => return (ActionState::BACKWALKING, None),
+              1 | 2 | 3 => return (ActionState::CROUCHING, None),
+              7 | 8 | 9 => return (ActionState::JUMPSQUAT, Some(MovementEventType::JUMP)),
+              _ => ()
+            }
           }
         }
         _ => ()
       }
     } else {
-      return ActionState::AIRBORNE;
+      return (ActionState::AIRBORNE, None);
     }
   }
-  return status.get_action_state();
+  return (status.get_action_state(), None);
 }
 
-#[derive(Debug)]
+pub fn buffer_player_jump(body: &mut CharacterBody, status: &mut CharacterStatus, motion: u8, superjump: bool, dashing: bool) {
+  let forward_vector = if dashing {
+    2.0
+  } else {
+    1.0
+  };
+  let x_velocity = match motion {
+    7 => body.facing_vector * (-body.back_walk_speed*2.0),
+    9 => body.facing_vector * (body.walk_speed * forward_vector),
+    _ => 0.0
+  };
+  body.jumpdata = Some(JumpData::new(x_velocity, status.jumpsquat, superjump));
+  status.set_busy(status.jumpsquat + 10);
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct CharacterMovementEvent{
   /// PlayerId for the movement event
   pub player_id: PlayerId,
   /// Type of movement event
   pub event_type: MovementEventType,
+  /// Motion for the movement event
+  pub motion: u8,
 }
 
 impl CharacterMovementEvent{
   fn new(
     player_id: PlayerId, 
-    event_type: MovementEventType
+    event_type: MovementEventType,
+    motion: u8
   ) -> Self {
     CharacterMovementEvent {
       player_id,
-      event_type
+      event_type,
+      motion
     }
   }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum MovementEventType {
   JUMP,
   DASH,
+  DASHJUMP,
   BACKDASH,
   AIRDASH,
   AIRBACKDASH,
 }
 
 
-pub fn update_player_status (player_data: ResMut<PlayerData>, mut query: Query<(&PlayerId, &mut CharacterStatus)>) {
+pub fn update_player_status (
+  player_data: ResMut<PlayerData>, 
+  mut query: Query<(&PlayerId, &mut CharacterStatus)>,
+  mut movement_writer: EventWriter<CharacterMovementEvent>
+) {
   for (player_id, mut char_status) in query.iter_mut() {
     for buffer in player_data.buffers.iter() {
       if buffer.player_id == *player_id {
-        let new_state = calculate_action_state(*char_status, buffer);
+        let (new_state, movement_event_type) = calculate_action_state(*char_status, buffer);
         char_status.set_action_state(new_state);
-        // Need something here to write MovementEvents
+        if let Some(move_type) = movement_event_type {
+          movement_writer.send(CharacterMovementEvent::new(*player_id, move_type, buffer.current_motion));
+        }
       }
     }
     char_status.tick();
   }
 }
 
-pub fn update_player_physics (player_data: ResMut<PlayerData>, mut query: Query<(&PlayerId, &mut CharacterBody)>) {
-  for (player_id, mut char_body) in query.iter_mut() {
-    for buffer in player_data.buffers.iter() {
-      if buffer.player_id == *player_id {
+pub fn update_player_physics (
+  player_data: ResMut<PlayerData>, 
+  mut movement_events: EventReader<CharacterMovementEvent>,
+  mut query: Query<(&PlayerId,&mut CharacterStatus, &mut CharacterBody)>
+) {
+  let events: Vec<&CharacterMovementEvent> = movement_events.iter().collect();
+  for (player_id, mut status, mut body) in query.iter_mut() {
+    let facing_vector = player_data.get_facing_vector(player_id);
+    body.set_facing_vector(facing_vector);
+    let mut movement_event_found = false;
+    let mut new_velocity = Vec2::ZERO;
 
-        let facing_vector = player_data.get_facing_vector(player_id);
-        char_body.set_facing_vector(facing_vector);
-        // Need to update velocity and run physics calculation here   
+    for event in &events {
+      if event.player_id == *player_id {
+        movement_event_found = true;
+        new_velocity = match event.event_type {
+          MovementEventType::BACKDASH => {
+            let (int_force, busy) = body.exec_backdash();
+            body.set_i_force(int_force);
+            status.set_busy(busy);
+            Vec2::ZERO
+          },
+          MovementEventType::JUMP => {
+            buffer_player_jump(&mut body, &mut status, event.motion, false, false);
+            Vec2::ZERO
+          },
+          MovementEventType::DASHJUMP => {
+            buffer_player_jump(&mut body, &mut status, event.motion, false, true);
+            Vec2::ZERO
+          },
+          _ => Vec2::ZERO
+        }
       }
     }
+    if !movement_event_found{
+      new_velocity = match status.get_action_state() {
+        ActionState::WALKING => Vec2::new(body.walk_speed * body.facing_vector, 0.0),
+        ActionState::BACKWALKING => Vec2::new(-body.back_walk_speed * body.facing_vector, 0.0),
+        ActionState::DASHING => Vec2::new(body.dash_speed * body.facing_vector,0.0),
+        ActionState::AIRBORNE => body.velocity - (Vec2::Y * body.gravity),
+        _ =>  body.velocity.custom_lerp(Vec2::ZERO, 0.2),
+      };
+    }
+    body.set_velocity(new_velocity);
+    body.execute_jump(&mut status);
   }
 }
 
+pub fn execute_player_physics (
+  mut player_data: ResMut<PlayerData>, 
+  mut query: Query<(&PlayerId, &mut CharacterStatus, &mut CharacterBody, &mut Transform)>
+) {
+  for (player_id, mut status, mut body, mut transform) in query.iter_mut() {
+    let tv = body.get_target_velo();
+    transform.translation += Vec3::new(tv.x, tv.y, 0.0);
+    if transform.translation.y < 0.0 {
+      transform.translation.y = 0.0;
+      status.land();
+    }
+    player_data.set_position(player_id, transform.translation);
+  }
+}

@@ -4,8 +4,8 @@ fn main() {
   App::new()
     .add_plugins(DefaultPlugins)
     .add_plugin(FighterPlugin)
-    .add_plugin(LogDiagnosticsPlugin::default())
-    .add_plugin(FrameTimeDiagnosticsPlugin::default())
+    // .add_plugin(LogDiagnosticsPlugin::default())
+    // .add_plugin(FrameTimeDiagnosticsPlugin::default())
     .add_startup_system(setup)
     .run();
 }
@@ -59,44 +59,13 @@ fn manage_hitboxes(
 
 fn setup(
     mut coms: Commands,
-    //box_colors: Res<CollisionBoxColors>,
 ) {
     load_character_sprite_data("./src/test.json");
     coms.spawn_bundle(OrthographicCameraBundle::new_2d());
     coms.spawn_bundle(UiCameraBundle::default());
 
-    coms
-      .spawn_bundle(SpriteBundle {
-        sprite: Sprite{
-          color: Color::TEAL,
-          custom_size: Some(Vec2::new(30.0, 60.0)),
-          ..Default::default()
-        },
-        transform: Transform::from_xyz(-40.0, 0.0, 0.0),
-        ..Default::default()
-      })
-      .insert(PlayerMovement {
-        player_id: PlayerId::P1,
-        facing_vector: 1.0,
-        ..Default::default()
-      });
-
-    coms
-      .spawn_bundle(SpriteBundle {
-        sprite: Sprite{
-          color: Color::INDIGO,
-          custom_size: Some(Vec2::new(30.0, 60.0)),
-          ..Default::default()
-        },
-        transform: Transform::from_xyz(40.0, 0.0, 0.0),
-        ..Default::default()
-      })
-      .insert(PlayerMovement {
-        player_id: PlayerId::P2,
-        facing_vector: -1.0,
-        ..Default::default()
-      });
-      //.id();
+    coms.spawn_player(PlayerId::P1);
+    coms.spawn_player(PlayerId::P2);
 
     // let hurtbox = coms
     //   .spawn_bundle(SpriteBundle {
