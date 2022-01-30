@@ -1,195 +1,5 @@
 use crate::prelude::*;
 
-
-#[derive(Debug, Clone, Copy, PartialEq, Component)]
-pub enum PlayerId {
-  P1,
-  P2
-}
-
-#[derive(Component, Clone, Copy, Debug)]
-pub struct CharacterStatus {
-  pub action_state: ActionState,
-  pub busy: u8,
-  pub jumpsquat: u8,
-  pub is_grounded: bool,
-  pub air_jumps: u8,
-  pub air_jumps_remaining: u8
-}
-
-impl CharacterStatus {
-  // Setters
-
-  /// Set a players ActionState
-  pub fn set_action_state(&mut self, action_state: ActionState) {
-    self.action_state = action_state
-  }
-
-  /// Set a players busy value, which translates to how many frames it will be until the players inputs will be read again
-  pub fn set_busy(&mut self, busy: u8) {
-    self.busy = busy;
-  }
-
-  pub fn land(&mut self) {
-    self.is_grounded = true;
-    self.air_jumps_remaining = self.air_jumps;
-    self.action_state = ActionState::STANDING;
-  }
-
-  // Getters
-
-  /// Get a players ActionState
-  pub fn get_action_state(&self) -> ActionState {
-    return self.action_state;
-  }
-
-  /// Get if a player is grounded
-  pub fn get_is_grounded(&self) -> bool {
-    return self.is_grounded;
-  }
-
-  pub fn get_is_busy(&self) -> bool {
-    return self.busy != 0;
-  }
-
-  // Logic
-
-  /// Reduce component timers by 1 frame
-  pub fn tick(&mut self) {
-    self.busy = countdown(self.busy);
-  }
-}
-
-impl Default for CharacterStatus {
-  fn default() -> Self {
-    CharacterStatus {
-      action_state: ActionState::default(),
-      busy: 0,
-      jumpsquat: 3,
-      is_grounded: true,
-      air_jumps: 1,
-      air_jumps_remaining: 1
-    }
-  }
-}
-
-#[derive(Component)]
-pub struct CharacterBody {
-	pub velocity: Vec2,
-  pub facing_vector: f32,
-  pub walk_speed: f32,
-  pub back_walk_speed: f32,
-  pub dash_speed: f32,
-  pub gravity: f32,
-  pub jump_height: f32,
-  pub int_force: Option<InterpolatedForce>,
-  pub backdash: Box<dyn Backdash>,
-  pub jumpdata: Option<JumpData>,
-}
-
-impl CharacterBody {
-  /// Set the players facing direction
-  pub fn set_facing_vector(&mut self, facing_vector: f32) {
-    self.facing_vector = facing_vector;
-  }
-
-  /// Set the players velocity
-  pub fn set_velocity(&mut self, velocity: Vec2) {
-    self.velocity = velocity;
-  }
-
-  /// Set the players current interpolated force
-  pub fn set_i_force(&mut self, int_force: InterpolatedForce) {
-    self.int_force = Some(int_force);
-  }
-
-  pub fn get_target_velo(&mut self) -> Vec2 {
-    if let Some(i_force) = self.int_force.as_mut() {
-      let i_force_velo = i_force.update();
-      if i_force.is_finished() {self.int_force = None;}
-      return i_force_velo;
-    } else {
-      return self.velocity;
-    }
-  }
-
-  pub fn execute_jump(&mut self, status: &mut CharacterStatus) {
-    if let Some(jd) = self.jumpdata.as_mut() {
-      if jd.squat > 0 {
-        jd.tick();
-      } else {
-        let jumpheight = if status.get_is_grounded() {
-          self.jump_height
-        } else {
-          self.jump_height * 0.75
-        };
-        self.velocity = Vec2::new(jd.x_velocity, jumpheight);
-        status.is_grounded = false;
-        self.jumpdata = None;
-        status.set_action_state(ActionState::AIRBORNE);
-      }
-    }
-  }
-
-  pub fn exec_backdash(&self) -> (InterpolatedForce, u8) {
-    return self.backdash.exec(self.facing_vector);
-  }
-}
-
-impl Default for CharacterBody {
-  fn default() -> Self {
-    CharacterBody {
-      velocity: Vec2::ZERO,
-      facing_vector: 1.0,
-      walk_speed: 4.0,
-      back_walk_speed: 2.5,
-      dash_speed: 8.0,
-      gravity: 1.0,
-      jump_height: 15.0,
-      int_force: None,
-      backdash: Box::new(BasicBackdash::new(25.0,20,20)),
-      jumpdata: None,
-    }
-  }
-}
-
-pub trait SpawnPlayer {
-  fn spawn_player(&mut self, player_id: PlayerId);
-}
-
-impl SpawnPlayer for Commands<'_, '_> {
-  fn spawn_player(&mut self, player_id: PlayerId) {
-    let (transform, color, facing_vector) = match player_id {
-      PlayerId::P1 => (
-        Transform::from_xyz(-40.0,0.0,0.0),
-        Color::TEAL,
-        1.0
-      ),
-      PlayerId::P2 => (
-        Transform::from_xyz(40.0,0.0,0.0),
-        Color::INDIGO,
-        -1.0
-      )
-    };
-
-    self.spawn_bundle(SpriteBundle {
-        sprite: Sprite{
-        color,
-        custom_size: Some(Vec2::new(30.0, 60.0)),
-        ..Default::default()
-      },
-        transform,
-        ..Default::default()
-      })
-      .insert(player_id)
-      .insert(CharacterStatus::default())
-      .insert( CharacterBody {
-        facing_vector,
-        ..Default::default()
-      });
-  }
-}
-
 pub fn calculate_action_state(status: CharacterStatus, buffer:&FighterInputBuffer) -> (ActionState, Option<MovementEventType>) {
   if !status.get_is_busy() {
     if status.get_is_grounded() {
@@ -242,7 +52,19 @@ pub fn calculate_action_state(status: CharacterStatus, buffer:&FighterInputBuffe
         _ => ()
       }
     } else {
-      return (ActionState::AIRBORNE, None);
+      if let Some(ct) = buffer.command_type {
+        match ct {
+          CommandType::DASH => return (ActionState::AIR_DASHING, Some(MovementEventType::AIRDASH)),
+          CommandType::BACK_DASH => return (ActionState::AIR_BACKDASHING, Some(MovementEventType::AIRBACKDASH)),
+          _ => ()
+        }               
+      }
+      match status.get_action_state() {
+        ActionState::AIR_DASHING => return (ActionState::AIR_DASHING, None),
+        ActionState::AIR_BACKDASHING => return (ActionState::AIR_BACKDASHING, None),
+        _ =>  return (ActionState::AIRBORNE, None)
+      }
+     
     }
   }
   return (status.get_action_state(), None);
@@ -263,57 +85,38 @@ pub fn buffer_player_jump(body: &mut CharacterBody, status: &mut CharacterStatus
   status.set_busy(status.jumpsquat + 10);
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct CharacterMovementEvent{
-  /// PlayerId for the movement event
-  pub player_id: PlayerId,
-  /// Type of movement event
-  pub event_type: MovementEventType,
-  /// Motion for the movement event
-  pub motion: u8,
-}
-
-impl CharacterMovementEvent{
-  fn new(
-    player_id: PlayerId, 
-    event_type: MovementEventType,
-    motion: u8
-  ) -> Self {
-    CharacterMovementEvent {
-      player_id,
-      event_type,
-      motion
+pub fn player_airdash(body: &mut CharacterBody, status: &mut CharacterStatus, forward: bool) {
+  if status.get_can_airdash() {
+    if forward {
+      body.airdash_time = body.max_airdash_time;
+      status.airdashes_remaining = countdown(status.airdashes_remaining);
+      status.busy = 10;
+      status.airdash_lockout = 15;
+    } else {
+      body.air_backdash_time = body.max_air_backdash_time;
+      status.airdashes_remaining = countdown(status.airdashes_remaining);
+      status.busy = 5;
+      status.airdash_lockout = 15;
     }
   }
 }
-
-#[derive(Debug, Clone, Copy)]
-pub enum MovementEventType {
-  JUMP,
-  DASH,
-  DASHJUMP,
-  BACKDASH,
-  AIRDASH,
-  AIRBACKDASH,
-}
-
 
 pub fn update_player_status (
   player_data: ResMut<PlayerData>, 
   mut query: Query<(&PlayerId, &mut CharacterStatus)>,
   mut movement_writer: EventWriter<CharacterMovementEvent>
 ) {
-  for (player_id, mut char_status) in query.iter_mut() {
+  for (player_id, mut status) in query.iter_mut() {
     for buffer in player_data.buffers.iter() {
       if buffer.player_id == *player_id {
-        let (new_state, movement_event_type) = calculate_action_state(*char_status, buffer);
-        char_status.set_action_state(new_state);
+        let (new_state, movement_event_type) = calculate_action_state(*status, buffer);
+        status.set_action_state(new_state);
         if let Some(move_type) = movement_event_type {
           movement_writer.send(CharacterMovementEvent::new(*player_id, move_type, buffer.current_motion));
         }
       }
     }
-    char_status.tick();
+    status.tick();
   }
 }
 
@@ -324,8 +127,19 @@ pub fn update_player_physics (
 ) {
   let events: Vec<&CharacterMovementEvent> = movement_events.iter().collect();
   for (player_id, mut status, mut body) in query.iter_mut() {
+    if player_id == &PlayerId::P2 {
+      println!("{:?}", status.get_action_state());
+    }
     let facing_vector = player_data.get_facing_vector(player_id);
-    body.set_facing_vector(facing_vector);
+    if status.get_is_grounded() {body.set_facing_vector(facing_vector);}
+    body.tick();
+    if body.airdash_time == 0 {
+      match status.get_action_state() {
+        ActionState::AIR_DASHING | ActionState::AIR_BACKDASHING => status.set_action_state(ActionState::AIRBORNE),
+        _ => (),
+      }
+    }
+
     let mut movement_event_found = false;
     let mut new_velocity = Vec2::ZERO;
 
@@ -347,6 +161,22 @@ pub fn update_player_physics (
             buffer_player_jump(&mut body, &mut status, event.motion, false, true);
             Vec2::ZERO
           },
+          MovementEventType::AIRDASH => {
+            if status.get_can_airdash() {
+              player_airdash(&mut body, &mut status, true);
+            Vec2::X * body.air_dash_speed * body.facing_vector
+            } else {
+              body.velocity - (Vec2::Y * body.gravity)
+            }
+          },
+          MovementEventType::AIRBACKDASH => {
+            if status.get_can_airdash() {
+              player_airdash(&mut body, &mut status, false);
+              Vec2::X * body.air_back_dash_speed * -body.facing_vector
+            } else {
+              body.velocity - (Vec2::Y * body.gravity)
+            }
+          },
           _ => Vec2::ZERO
         }
       }
@@ -357,6 +187,8 @@ pub fn update_player_physics (
         ActionState::BACKWALKING => Vec2::new(-body.back_walk_speed * body.facing_vector, 0.0),
         ActionState::DASHING => Vec2::new(body.dash_speed * body.facing_vector,0.0),
         ActionState::AIRBORNE => body.velocity - (Vec2::Y * body.gravity),
+        ActionState::AIR_DASHING => Vec2::X * body.air_dash_speed * body.facing_vector,
+        ActionState::AIR_BACKDASHING => Vec2::X * body.air_back_dash_speed * -body.facing_vector,
         _ =>  body.velocity.custom_lerp(Vec2::ZERO, 0.2),
       };
     }
@@ -377,5 +209,44 @@ pub fn execute_player_physics (
       status.land();
     }
     player_data.set_position(player_id, transform.translation);
+  }
+}
+
+
+pub fn update_debug_ui(
+  mut q: QuerySet<(
+    QueryState<(&mut Text, &PlayerId)>,
+    QueryState<(&CharacterStatus, &CharacterBody, &PlayerId)>
+  )>
+) {
+  let mut player_text: Vec<Vec<String>> = Vec::new();
+
+  for (status, body, p_player_id) in q.q1().iter() {
+    let mut my_strings: Vec<String> = Vec::new();
+    my_strings.push(format!("Action State: {:?} \n", status.action_state));
+    my_strings.push(format!("Busy: {:?} \n", status.busy));
+    my_strings.push(format!("Is Grounded: {:?} \n", status.is_grounded));
+    my_strings.push(format!("Airdashes: {:?} \n", status.airdashes_remaining));
+    my_strings.push(format!("Airdash Lockout: {:?} \n", status.airdash_lockout));
+    my_strings.push(format!("Velocity: {:?} \n", body.velocity));
+    my_strings.push(format!("Airdash Time: {:?} \n", body.airdash_time));
+    my_strings.push(format!("Air Backdash Time: {:?}\n", body.air_backdash_time));
+    let strings_to_push = my_strings.clone();
+    player_text.push(strings_to_push);
+  }
+
+  for (mut text, player_id) in q.q0().iter_mut() {
+    let index = match player_id {
+      PlayerId::P1 => 0,
+      PlayerId::P2 => 1
+    };
+      text.sections[0].value = player_text[index][0].clone();
+      text.sections[1].value = player_text[index][1].clone();
+      text.sections[2].value = player_text[index][2].clone();
+      text.sections[3].value = player_text[index][3].clone();
+      text.sections[4].value = player_text[index][4].clone();
+      text.sections[5].value = player_text[index][5].clone();
+      text.sections[6].value = player_text[index][6].clone();
+      text.sections[7].value = player_text[index][7].clone();
   }
 }

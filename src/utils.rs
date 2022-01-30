@@ -14,6 +14,7 @@ pub fn countdown(val: u8) -> u8 {
 pub enum FighterSystemLabels {
     InputWrite,
     InputRead,
+    StatusUpdate,
     PhysicsUpdate,
     PhysicsExecute,
 }

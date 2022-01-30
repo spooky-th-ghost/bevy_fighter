@@ -59,6 +59,7 @@ fn manage_hitboxes(
 
 fn setup(
     mut coms: Commands,
+    asset_server: Res<AssetServer>
 ) {
     load_character_sprite_data("./src/test.json");
     coms.spawn_bundle(OrthographicCameraBundle::new_2d());
@@ -66,6 +67,8 @@ fn setup(
 
     coms.spawn_player(PlayerId::P1);
     coms.spawn_player(PlayerId::P2);
+    coms.spawn_debug_ui(PlayerId::P1, &asset_server.load("fonts/Roboto-Black.ttf"));
+    coms.spawn_debug_ui(PlayerId::P2, &asset_server.load("fonts/Roboto-Black.ttf"));
 
     // let hurtbox = coms
     //   .spawn_bundle(SpriteBundle {
