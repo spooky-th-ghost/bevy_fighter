@@ -10,7 +10,8 @@ pub struct FighterInputBuffer {
   pub command_duration: u8,
   pub command_type: Option<CommandType>,
   pub current_motion: u8,
-  pub previous_motion: u8
+  pub previous_motion: u8,
+  pub command_lockout: u8,
 }
 
 impl FighterInputBuffer {
@@ -25,6 +26,7 @@ impl FighterInputBuffer {
       command_type: None,
       current_motion: 5,
       previous_motion: 5,
+      command_lockout: 0,
     }
   }
 
@@ -37,15 +39,7 @@ impl FighterInputBuffer {
       self.previous_motion = self.current_motion;
       self.current_motion = event.motion;
     };
-    
-    let (motion_string, command_input) = self.extract_special_motions();
-
-    let mut cm_input = String::new();
-    if let Some(sp) = command_input {
-      write!(cm_input,"{:?}", sp).unwrap();
-    } else {
-      write!(cm_input," ").unwrap();
-    };
+    self.extract_special_motions();
   }
 
   fn tick(&mut self) {
@@ -61,14 +55,12 @@ impl FighterInputBuffer {
       self.just_pressed.remove(0);
     }
 
-
-    if self.command_duration > 0 {
-      self.command_duration -= 1;
-    }
-
     if self.command_duration == 0 {
       self.command_type = None;
     }
+
+    self.command_duration = countdown(self.command_duration);
+    self.command_lockout = countdown(self.command_lockout);
   }
 
   fn motion_to_string(&mut self) -> String {
@@ -78,25 +70,31 @@ impl FighterInputBuffer {
     }
     return motions_string;
   }
-  
-  fn extract_special_motions(&mut self) -> (String,Option<CommandType>) {
-    let motion_string = self.motion_to_string();
-    let mut priority: u8 = self.command_priority;
-    let mut current_command: Option<CommandType> = None;
 
-    for command_motion in MOTIONS.iter() {
-      if  command_motion.check(&motion_string[..], priority) {
-        priority = command_motion.priority;
-        current_command = Some(command_motion.command.clone());
+  pub fn consume_motion(&mut self) {
+    self.command_type = None;
+    self.command_lockout = 3;
+    self.command_duration = 0;
+  }
+  
+  fn extract_special_motions(&mut self) {
+    if self.command_lockout == 0 {
+      let motion_string = self.motion_to_string();
+      let mut priority: u8 = self.command_priority;
+      let mut current_command: Option<CommandType> = None;
+
+      for command_motion in MOTIONS.iter() {
+        if  command_motion.check(&motion_string[..], priority) {
+          priority = command_motion.priority;
+          current_command = Some(command_motion.command.clone());
+        }
+      }
+
+      if let Some(c) = current_command {
+        self.command_type = Some(c);
+        self.command_duration = 5;
       }
     }
-
-    if let Some(c) = current_command {
-      self.command_type = Some(c);
-      self.command_duration = 5;
-    }
-
-    return (motion_string, self.command_type.clone());
   }
 
 }
