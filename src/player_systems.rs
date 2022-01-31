@@ -1,90 +1,5 @@
 use crate::prelude::*;
 
-pub fn calculate_action_state(status: CharacterStatus, buffer:&FighterInputBuffer) -> (ActionState, Option<MovementEventType>) {
-  if !status.get_is_busy() {
-    if status.get_is_grounded() {
-      match buffer.current_motion {
-        7 | 8 | 9 => {
-          match status.get_action_state() {
-            ActionState::DASHING =>  return (ActionState::JUMPSQUAT, Some(MovementEventType::DASHJUMP)),
-            _ => return (ActionState::JUMPSQUAT, Some(MovementEventType::JUMP))
-          }
-        },
-        _ => ()
-      }
-      match status.get_action_state() {
-        ActionState::WALKING | ActionState::BACKWALKING | ActionState::CROUCHING | ActionState::STANDING | ActionState::BACKDASHING => {
-          if let Some(ct) = buffer.command_type {
-            match ct {
-              CommandType::DASH => return (ActionState::DASHING, None),
-              CommandType::BACK_DASH => return (ActionState::BACKDASHING,Some(MovementEventType::BACKDASH)),
-              _ => ()
-            }               
-          } else {
-            match buffer.current_motion {
-              5 => return (ActionState::STANDING, None),
-              6 => return (ActionState::WALKING, None),
-              4 => return (ActionState::BACKWALKING, None),
-              1 | 2 | 3 => return (ActionState::CROUCHING, None),
-              7 | 8 | 9 => return (ActionState::JUMPSQUAT, Some(MovementEventType::JUMP)),
-              _ => ()
-            }
-          }
-        },
-        ActionState::DASHING => {
-          if let Some(ct) = buffer.command_type {
-            match ct {
-              CommandType::DASH => return (ActionState::DASHING, None),
-              CommandType::BACK_DASH => return (ActionState::BACKDASHING,Some(MovementEventType::BACKDASH)),
-              _ => ()
-            }               
-          } else {
-            match buffer.current_motion {
-              5 => return (ActionState::STANDING, None),
-              6 => return (ActionState::DASHING, None),
-              4 => return (ActionState::BACKWALKING, None),
-              1 | 2 | 3 => return (ActionState::CROUCHING, None),
-              7 | 8 | 9 => return (ActionState::JUMPSQUAT, Some(MovementEventType::JUMP)),
-              _ => ()
-            }
-          }
-        }
-        _ => ()
-      }
-    } else {
-      if let Some(ct) = buffer.command_type {
-        match ct {
-          CommandType::DASH => return (ActionState::AIR_DASHING, Some(MovementEventType::AIRDASH)),
-          CommandType::BACK_DASH => return (ActionState::AIR_BACKDASHING, Some(MovementEventType::AIRBACKDASH)),
-          _ => ()
-        }               
-      }
-      match status.get_action_state() {
-        ActionState::AIR_DASHING => return (ActionState::AIR_DASHING, None),
-        ActionState::AIR_BACKDASHING => return (ActionState::AIR_BACKDASHING, None),
-        _ =>  return (ActionState::AIRBORNE, None)
-      }
-     
-    }
-  }
-  return (status.get_action_state(), None);
-}
-
-pub fn buffer_player_jump(body: &mut CharacterBody, status: &mut CharacterStatus, motion: u8, superjump: bool, dashing: bool) {
-  let forward_vector = if dashing {
-    2.0
-  } else {
-    1.0
-  };
-  let x_velocity = match motion {
-    7 => body.facing_vector * (-body.back_walk_speed*2.0),
-    9 => body.facing_vector * (body.walk_speed * forward_vector),
-    _ => 0.0
-  };
-  body.jumpdata = Some(JumpData::new(x_velocity, status.jumpsquat, superjump));
-  status.set_busy(status.jumpsquat + 10);
-}
-
 pub fn player_airdash(body: &mut CharacterBody, status: &mut CharacterStatus, forward: bool) {
   if status.get_can_airdash() {
     status.airdashes_remaining = countdown(status.airdashes_remaining);
@@ -96,25 +11,6 @@ pub fn player_airdash(body: &mut CharacterBody, status: &mut CharacterStatus, fo
     } else {
       body.airdash_time = body.max_air_backdash_time;
     }
-  }
-}
-
-pub fn update_player_status (
-  player_data: ResMut<PlayerData>, 
-  mut query: Query<(&PlayerId, &mut CharacterStatus)>,
-  mut movement_writer: EventWriter<CharacterMovementEvent>
-) {
-  for (player_id, mut status) in query.iter_mut() {
-    for buffer in player_data.buffers.iter() {
-      if buffer.player_id == *player_id {
-        let (new_state, movement_event_type) = calculate_action_state(*status, buffer);
-        status.set_action_state(new_state);
-        if let Some(move_type) = movement_event_type {
-          movement_writer.send(CharacterMovementEvent::new(*player_id, move_type, buffer.current_motion));
-        }
-      }
-    }
-    status.tick();
   }
 }
 
