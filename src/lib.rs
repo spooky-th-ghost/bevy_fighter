@@ -30,6 +30,7 @@ pub mod prelude {
     utils::HashMap,
     ecs::schedule::SystemLabel,
     diagnostic::{
+      Diagnostics,
       FrameTimeDiagnosticsPlugin, 
       LogDiagnosticsPlugin
     },

@@ -79,6 +79,14 @@ impl SpawnDebugUi for Commands<'_,'_> {
                             color: Color::BLACK,
                         },
                     },
+                    TextSection {
+                        value: "FPS: ".to_string(),
+                        style: TextStyle {
+                            font: font.clone(),
+                            font_size,
+                            color: Color::BLACK,
+                        },
+                    },
                 ],
                 alignment: TextAlignment {
                   vertical: VerticalAlign::Top,

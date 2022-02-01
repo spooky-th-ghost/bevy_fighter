@@ -37,9 +37,16 @@ pub fn update_debug_ui(
   mut q: QuerySet<(
     QueryState<(&mut Text, &PlayerId)>,
     QueryState<(&CharacterStatus, &CharacterBody)>
-  )>
+  )>,
+  diagnostics: Res<Diagnostics>,
 ) {
   let mut player_text: Vec<Vec<String>> = Vec::new();
+  let mut fps = 0.0;
+  if let Some(fps_diagnostic) = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS) {
+      if let Some(fps_avg) = fps_diagnostic.average() {
+          fps = fps_avg;
+      }
+  }
 
   for (status, body) in q.q1().iter() {
     let mut my_strings: Vec<String> = Vec::new();
@@ -50,6 +57,7 @@ pub fn update_debug_ui(
     my_strings.push(format!("Airdash Lockout: {:?} \n", status.airdash_lockout));
     my_strings.push(format!("Velocity: {:?} \n", body.velocity));
     my_strings.push(format!("Airdash Time: {:?} \n", body.airdash_time));
+    my_strings.push(format!("FPS: {:.1}", fps));
     let strings_to_push = my_strings.clone();
     player_text.push(strings_to_push);
   }
@@ -66,6 +74,7 @@ pub fn update_debug_ui(
       text.sections[4].value = player_text[index][4].clone();
       text.sections[5].value = player_text[index][5].clone();
       text.sections[6].value = player_text[index][6].clone();
+      text.sections[7].value = player_text[index][7].clone();
   }
 }
 
