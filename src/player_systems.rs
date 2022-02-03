@@ -57,6 +57,7 @@ pub fn update_debug_ui(
     my_strings.push(format!("Airdash Lockout: {:?} \n", status.airdash_lockout));
     my_strings.push(format!("Velocity: {:?} \n", body.velocity));
     my_strings.push(format!("Airdash Time: {:?} \n", body.airdash_time));
+    my_strings.push(format!("Facing Vector: {:?} \n", body.facing_vector));
     my_strings.push(format!("FPS: {:.1}", fps));
     let strings_to_push = my_strings.clone();
     player_text.push(strings_to_push);
@@ -75,6 +76,7 @@ pub fn update_debug_ui(
       text.sections[5].value = player_text[index][5].clone();
       text.sections[6].value = player_text[index][6].clone();
       text.sections[7].value = player_text[index][7].clone();
+      text.sections[8].value = player_text[index][8].clone();
   }
 }
 
@@ -137,7 +139,7 @@ pub fn determine_player_velocity_and_state (
           ActionState::AIRBORNE => body.velocity - (Vec2::Y * body.gravity),
           ActionState::AIR_DASHING => Vec2::X * body.air_dash_speed * body.facing_vector,
           ActionState::AIR_BACKDASHING => Vec2::X * body.air_back_dash_speed * -body.facing_vector,
-          _ =>  body.velocity.custom_lerp(Vec2::ZERO, 0.2),
+          _ => body.velocity.custom_lerp(Vec2::ZERO, 0.2),
         };
         body.set_velocity(new_velocity);
         body.execute_jump(&mut status);

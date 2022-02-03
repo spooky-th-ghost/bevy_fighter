@@ -22,6 +22,20 @@ impl FighterCharacterPosition {
   }
 }
 
+pub struct FighterFacingVector {
+  player_id: PlayerId,
+  vector: f32,
+}
+
+impl FighterFacingVector {
+  pub fn new(player_id: PlayerId, vector: f32) -> Self {
+    FighterFacingVector {
+      player_id,
+      vector
+    }
+  }
+}
+
 pub struct PlayerData {
   pub local_devices: Vec<FighterInputMapper>,
   pub buffers: Vec<FighterInputBuffer>,

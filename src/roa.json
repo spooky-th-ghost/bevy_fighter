@@ -1,0 +1,172 @@
+{
+  "animations": [
+    {
+      "name": "idle",
+      "first_frame": 0,
+      "length": 21,
+      "loopable": true
+    },
+    {
+      "name": "dash_startup",
+      "first_frame": 21,
+      "length": 2,
+      "loopable": false
+    },
+    {
+      "name": "dash",
+      "first_frame": 23,
+      "length": 2,
+      "loopable": true
+    },
+    {
+      "name": "dash_end",
+      "first_frame": 25,
+      "length": 7,
+      "loopable": false
+    },
+    {
+      "name": "backdash_start",
+      "first_frame": 32,
+      "length": 1,
+      "loopable": false
+    },
+    {
+      "name": "backdash",
+      "first_frame": 33,
+      "length": 2,
+      "loopable": true
+    },
+    {
+      "name": "backdash_end",
+      "first_frame": 35,
+      "length": 6,
+      "loopable": false
+    },
+    {
+      "name": "airdash_start",
+      "first_frame": 41,
+      "length": 1,
+      "loopable": false
+    },
+    {
+      "name": "airdash",
+      "first_frame": 42,
+      "length": 2,
+      "loopable": true
+    },
+    {
+      "name": "airdash_end",
+      "first_frame": 44,
+      "length": 4,
+      "loopable": false
+    },
+    {
+      "name": "backairdash_start",
+      "first_frame": 48,
+      "length": 2,
+      "loopable": false
+    },
+    {
+      "name": "backairdash",
+      "first_frame": 50,
+      "length": 3,
+      "loopable": true
+    },
+    {
+      "name": "backairdash_end",
+      "first_frame": 53,
+      "length": 6,
+      "loopable": false
+    },
+    {
+      "name": "jumpsquat",
+      "first_frame": 59,
+      "length": 3,
+      "loopable": false
+    },
+    {
+      "name": "rising",
+      "first_frame": 62,
+      "length": 3,
+      "loopable": true
+    },
+    {
+      "name": "rtf",
+      "first_frame": 65,
+      "length": 3,
+      "loopable": false
+    },
+    {
+      "name": "falling",
+      "first_frame": 68,
+      "length": 3,
+      "loopable": true
+    },
+    {
+      "name": "landing",
+      "first_frame": 71,
+      "length": 6,
+      "loopable": false
+    },
+    {
+      "name": "airdash_end",
+      "first_frame": 44,
+      "length": 4,
+      "loopable": false
+    },
+    {
+      "name": "crouching_start",
+      "first_frame": 182,
+      "length": 5,
+      "loopable": false
+    },
+    {
+      "name": "crouching",
+      "first_frame": 104,
+      "length": 1,
+      "loopable": true
+    },
+    {
+      "name": "crouching_end",
+      "first_frame": 187,
+      "length": 5,
+      "loopable": false
+    },
+    {
+      "name": "walk_start",
+      "first_frame": 149,
+      "length": 2,
+      "loopable": false
+    },
+    {
+      "name": "walk",
+      "first_frame": 151,
+      "length": 12,
+      "loopable": true
+    },
+    {
+      "name": "walk_end",
+      "first_frame": 163,
+      "length": 2,
+      "loopable": false
+    },
+    {
+      "name": "backwalk_start",
+      "first_frame": 165,
+      "length": 2,
+      "loopable": false
+    },
+    {
+      "name": "backwalk",
+      "first_frame": 167,
+      "length": 12,
+      "loopable": true
+    },
+    {
+      "name": "backwalk_end",
+      "first_frame": 179,
+      "length": 3,
+      "loopable": false
+    }
+  ]
+}

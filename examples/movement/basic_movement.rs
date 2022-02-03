@@ -59,9 +59,10 @@ fn manage_hitboxes(
 
 fn setup(
     mut coms: Commands,
-    asset_server: Res<AssetServer>
+    asset_server: Res<AssetServer>,
+    mut animation_library: ResMut<AnimationLibrary>, 
 ) {
-    load_character_sprite_data("./src/test.json");
+    animation_library.load_character_sprite_data("roa","./src/roa.json");
     coms.spawn_bundle(OrthographicCameraBundle::new_2d());
     coms.spawn_bundle(UiCameraBundle::default());
 

@@ -18,6 +18,7 @@ pub mod prelude {
   // external crates
   pub use lazy_static;
   pub use regex::Regex;
+  pub use serde::{Deserialize, Serialize};
   pub use serde_json::{
     from_str,
     Result,
@@ -27,7 +28,6 @@ pub mod prelude {
     input::keyboard::KeyboardInput,
     core::FixedTimestep,
     ui::Val::*,
-    utils::HashMap,
     ecs::schedule::SystemLabel,
     diagnostic::{
       Diagnostics,
@@ -41,6 +41,7 @@ pub mod prelude {
     path::Path,
     fs::read_to_string,
     io::BufReader,
+    collections::HashMap
   };
   
   // local mods

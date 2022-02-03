@@ -80,6 +80,14 @@ impl SpawnDebugUi for Commands<'_,'_> {
                         },
                     },
                     TextSection {
+                        value: "Facing Vector: ".to_string(),
+                        style: TextStyle {
+                            font: font.clone(),
+                            font_size,
+                            color: Color::BLACK,
+                        },
+                    },
+                    TextSection {
                         value: "FPS: ".to_string(),
                         style: TextStyle {
                             font: font.clone(),

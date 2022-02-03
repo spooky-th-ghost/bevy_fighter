@@ -8,9 +8,13 @@ pub trait CustomLerp {
 
 impl CustomLerp for Vec2 {
   fn custom_lerp(&self, target: Vec2, t: f32) -> Vec2 {
-    let _x = self.x.lerp(target.x,t);
-    let _y = self.y.lerp(target.y,t);
-    return Vec2::new(_x,_y);
+    if &self.distance(target) > &0.02 {
+      let _x = self.x.lerp(target.x,t);
+      let _y = self.y.lerp(target.y,t);
+      return Vec2::new(_x,_y);
+    } else {
+      return target;
+    }
   }
 }
 

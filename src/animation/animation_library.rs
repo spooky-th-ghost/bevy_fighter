@@ -1,14 +1,57 @@
 pub use crate::prelude::*;
 
+#[derive(Deserialize, Serialize)]
+pub struct SpriteSheetJson {
+  pub animations: Vec<RawAnimation>
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct RawAnimation {
+  pub name: String,
+  pub first_frame: usize,
+  pub length: usize,
+  pub loopable: bool
+}
+
+#[derive(Debug)]
 pub struct AnimationLibrary {
   animations: HashMap<String, Animation>
 }
 
+
 impl AnimationLibrary {
-  pub fn new(animations: HashMap<String, Animation>) -> Self {
+  pub fn new() -> Self {
+    let animations: HashMap<String, Animation> = HashMap::new();
     AnimationLibrary {
       animations
     }
+  }
+
+  pub fn load_character_sprite_data(&mut self, character_name: &str, raw_path: &str) {
+  let path = Path::new(raw_path);
+  if let Ok(raw_string) = read_to_string(path) {
+    let raw_slice = &raw_string[..]; 
+    let json_sheet: SpriteSheetJson = from_str(raw_slice).unwrap();
+
+    let mut raw_anims: Vec<(String, Animation)> = Vec::new();
+    for animation in json_sheet.animations {
+      raw_anims.push(
+        (
+          format!("{}_{}",character_name,animation.name.clone()),
+          Animation::new(animation.first_frame, animation.length, animation.loopable)
+        )
+      );
+    }
+
+    self.add(
+      HashMap::from_iter::<HashMap<String, Animation>>(raw_anims.iter().cloned().collect())
+    );
+    println!("{:?}", self);
+  }
+}
+
+  pub fn add(&mut self, animations: HashMap<String, Animation>) {
+    self.animations.extend(animations);
   }
 
   pub fn get(&self, anim_id: String) -> Option<Animation>{
@@ -46,4 +89,10 @@ impl Animation {
     }
     return (new_relative_index, new_true_index);
   }
+}
+
+pub struct AnimationState {
+  core: Animation,
+  enter: Option<Animation>,
+  exit: Option<Animation>,
 }
