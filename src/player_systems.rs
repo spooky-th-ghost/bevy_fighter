@@ -16,10 +16,10 @@ pub fn player_airdash(body: &mut CharacterBody, status: &mut CharacterStatus, fo
 
 pub fn execute_player_physics (
   mut player_data: ResMut<PlayerData>, 
-  mut query: Query<(&PlayerId, &mut CharacterStatus, &mut CharacterBody, &mut Transform)>,
+  mut query: Query<(&PlayerId, &mut CharacterStatus, &mut CharacterBody, &mut Transform, &mut TextureAtlasSprite)>,
   mut transition_writer: EventWriter<AnimationTransitionEvent>,
 ) {
-  for (player_id, mut status, mut body, mut transform) in query.iter_mut() {
+  for (player_id, mut status, mut body, mut transform, mut sprite) in query.iter_mut() {
     let tv = body.get_target_velo();
     transform.translation += Vec3::new(tv.x, tv.y, 0.0);
     if transform.translation.y < 0.0 {
@@ -35,7 +35,10 @@ pub fn execute_player_physics (
 
     player_data.set_position(player_id, transform.translation);
     let facing_vector = player_data.get_facing_vector(player_id);
-    if status.get_is_grounded() {body.set_facing_vector(facing_vector);}
+    if status.can_turn() {
+      sprite.flip_x = facing_vector < 0.0; 
+      body.set_facing_vector(facing_vector);
+    }
   }
 }
 
@@ -147,7 +150,8 @@ pub fn determine_player_velocity_and_state (
           ActionState::AIRBORNE => body.velocity - (Vec2::Y * body.gravity),
           ActionState::AIR_DASHING => Vec2::X * body.air_dash_speed * body.facing_vector,
           ActionState::AIR_BACKDASHING => Vec2::X * body.air_back_dash_speed * -body.facing_vector,
-          _ => body.velocity.custom_lerp(Vec2::ZERO, 0.2),
+          ActionState::STANDING => Vec2::ZERO,
+          _ => body.velocity.custom_lerp(Vec2::ZERO, 0.5),
         };
         body.set_velocity(new_velocity);
         body.execute_jump(&mut status);

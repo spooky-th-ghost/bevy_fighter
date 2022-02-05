@@ -70,12 +70,26 @@ impl CharacterStatus {
     return self.action_state != self.previous_action_state;
   }
 
+  pub fn can_turn(&self) -> bool {
+    match self.action_state {
+      ActionState::STANDING
+      | ActionState::AIRBORNE
+      | ActionState::WALKING
+      | ActionState::BACKWALKING
+      | ActionState::CROUCHING
+      | ActionState::DASHING
+      | ActionState::JUMPSQUAT => return true,
+      _ => return false,
+    }
+  }
+
   pub fn calculate_transition(&self) -> Option<AnimationStateTransition> {
     match self.previous_action_state {
       ActionState::DASHING => {
         match self.action_state {
           ActionState::JUMPSQUAT => return Some(AnimationStateTransition::DashToRise),
           ActionState::STANDING =>  return Some(AnimationStateTransition::DashToIdle),
+          ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
           _ => return None
         }
       },
@@ -84,6 +98,7 @@ impl CharacterStatus {
           ActionState::JUMPSQUAT => return Some(AnimationStateTransition::WalkToRise),
           ActionState::STANDING =>  return Some(AnimationStateTransition::WalkToIdle),
           ActionState::DASHING => return Some(AnimationStateTransition::WalkToDash),
+          ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
           _ => return None
         }
       },
@@ -92,20 +107,23 @@ impl CharacterStatus {
           ActionState::JUMPSQUAT => return Some(AnimationStateTransition::BackwalkToRise),
           ActionState::STANDING =>  return Some(AnimationStateTransition::BackwalkToIdle),
           ActionState::DASHING => return Some(AnimationStateTransition::BackwalkToBackdash),
+          ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
           _ => return None
         }
       },
       ActionState::CROUCHING => {
         match self.action_state {
           ActionState::STANDING =>  return Some(AnimationStateTransition::CrouchToIdle),
+          ActionState::JUMPSQUAT => return Some(AnimationStateTransition::BackwalkToRise),
           _ => return None
         }
       },
       ActionState::AIRBORNE => {
-        // match self.action_state { 
-        //   ActionState::STANDING => return Some(AnimationStateTransition::FallToIdle),
-        //   _ => return None,
-        // }
+        match self.action_state { 
+          ActionState::AIR_DASHING => return Some(AnimationStateTransition::FallToAirdash),
+          ActionState::AIR_BACKDASHING => return Some(AnimationStateTransition::FallToAirbackdash),
+          _ => return None,
+        }
         return None
       }, // need to do the Rise_Fall_Split
       ActionState::STANDING => {
@@ -115,12 +133,15 @@ impl CharacterStatus {
           ActionState::WALKING => return Some(AnimationStateTransition::IdleToWalk),
           ActionState::BACKWALKING => return Some(AnimationStateTransition::IdleToBackwalk),
           ActionState::CROUCHING => return Some(AnimationStateTransition::IdleToCrouching),
+          ActionState::JUMPSQUAT => return Some(AnimationStateTransition::BackwalkToRise),
           _ => return None
         }
       },
       ActionState::BACKDASHING => {
         match self.action_state {
           ActionState::STANDING => return Some(AnimationStateTransition::BackDashToIdle),
+          ActionState::BACKWALKING => return Some(AnimationStateTransition::BackDashToBackwalk),
+          ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
           _ => return None
         }
       },

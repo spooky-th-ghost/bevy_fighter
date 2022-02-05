@@ -120,6 +120,7 @@ pub enum AnimationStateTransition {
   DashToRise,
   DashToIdle,
   BackDashToIdle,
+  BackDashToBackwalk,
   RiseToAirdash,
   RiseToAirbackdash,
   RiseToFall,
@@ -130,6 +131,8 @@ pub enum AnimationStateTransition {
   FallToIdle,
   AirdashToFall,
   AirbackdashToFall,
+  //Absolute Transitions
+  ToCrouch,
 }
 
 #[derive(Debug, Component)]
@@ -167,6 +170,19 @@ impl AnimationController {
   }
 
   pub fn get_next_frame(&mut self) -> usize {
+    self.current_hold = match self.animation_state {
+      AnimationState::SMEARING => {
+        if let Some(sa) = self.smear_animation {
+          sa.hold
+        } else {
+          2
+        }
+      },
+      AnimationState::LOOPING => {
+        self.core_animation.hold
+      }
+    };
+
     if self.hold_counter == self.current_hold {
       let mut new_index: usize = self.current_index + 1;
       match self.animation_state {
@@ -372,6 +388,22 @@ impl AnimationController {
         self.animation_state = AnimationState::SMEARING;
         self.smear_animation = self.get_animation(format!("{}_crouch<>idle", self.character_prefix));
         let core_animation = self.get_animation(format!("{}_idle", self.character_prefix));
+        if let Some(ca) = core_animation {
+          self.core_animation = ca;
+        }
+      },
+      AnimationStateTransition::BackDashToBackwalk => {
+        self.animation_state = AnimationState::SMEARING;
+        self.smear_animation = self.get_animation(format!("{}_backdash<>idle", self.character_prefix));
+        let core_animation = self.get_animation(format!("{}_backwalk", self.character_prefix));
+        if let Some(ca) = core_animation {
+          self.core_animation = ca;
+        }
+      },
+      AnimationStateTransition::ToCrouch => {
+        self.animation_state = AnimationState::SMEARING;
+        self.smear_animation = self.get_animation(format!("{}_idle<>crouch", self.character_prefix));
+        let core_animation = self.get_animation(format!("{}_crouch", self.character_prefix));
         if let Some(ca) = core_animation {
           self.core_animation = ca;
         }

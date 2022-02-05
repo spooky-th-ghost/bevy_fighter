@@ -5,7 +5,7 @@
       "first_frame": 0,
       "length": 21,
       "loopable": true,
-      "hold": 2
+      "hold": 4
     },
     {
       "name": "idle<>dash",
@@ -138,7 +138,7 @@
       "first_frame": 182,
       "length": 5,
       "loopable": false,
-      "hold": 2
+      "hold": 1
     },
     {
       "name": "crouch",
@@ -166,7 +166,7 @@
       "first_frame": 151,
       "length": 12,
       "loopable": true,
-      "hold": 2
+      "hold": 4
     },
     {
       "name": "walk<>idle",
@@ -187,7 +187,7 @@
       "first_frame": 167,
       "length": 12,
       "loopable": true,
-      "hold": 2
+      "hold": 4
     },
     {
       "name": "backwalk<>idle",
