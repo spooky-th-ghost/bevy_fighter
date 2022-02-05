@@ -4,169 +4,197 @@
       "name": "idle",
       "first_frame": 0,
       "length": 21,
-      "loopable": true
+      "loopable": true,
+      "hold": 2
     },
     {
-      "name": "dash_startup",
+      "name": "idle<>dash",
       "first_frame": 21,
       "length": 2,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
       "name": "dash",
       "first_frame": 23,
       "length": 2,
-      "loopable": true
+      "loopable": true,
+      "hold": 2
     },
     {
-      "name": "dash_end",
+      "name": "dash<>idle",
       "first_frame": 25,
       "length": 7,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
-      "name": "backdash_start",
+      "name": "idle<>backdash",
       "first_frame": 32,
       "length": 1,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
       "name": "backdash",
       "first_frame": 33,
       "length": 2,
-      "loopable": true
+      "loopable": true,
+      "hold": 2
     },
     {
-      "name": "backdash_end",
+      "name": "backdash<>idle",
       "first_frame": 35,
       "length": 6,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
-      "name": "airdash_start",
+      "name": "fall<>airdash",
       "first_frame": 41,
       "length": 1,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
       "name": "airdash",
       "first_frame": 42,
       "length": 2,
-      "loopable": true
+      "loopable": true,
+      "hold": 2
     },
     {
-      "name": "airdash_end",
+      "name": "airdash<>fall",
       "first_frame": 44,
       "length": 4,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
-      "name": "backairdash_start",
+      "name": "fall<>backairdash",
       "first_frame": 48,
       "length": 2,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
       "name": "backairdash",
       "first_frame": 50,
       "length": 3,
-      "loopable": true
+      "loopable": true,
+      "hold": 2
     },
     {
-      "name": "backairdash_end",
+      "name": "backairdash<>fall",
       "first_frame": 53,
       "length": 6,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
       "name": "jumpsquat",
       "first_frame": 59,
       "length": 3,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
-      "name": "rising",
+      "name": "rise",
       "first_frame": 62,
       "length": 3,
-      "loopable": true
+      "loopable": true,
+      "hold": 2
     },
     {
-      "name": "rtf",
+      "name": "rise<>fall",
       "first_frame": 65,
       "length": 3,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
-      "name": "falling",
+      "name": "fall",
       "first_frame": 68,
       "length": 3,
-      "loopable": true
+      "loopable": true,
+      "hold": 2
     },
     {
-      "name": "landing",
+      "name": "fall<>idle",
       "first_frame": 71,
       "length": 6,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
-      "name": "airdash_end",
+      "name": "airdash<>fall",
       "first_frame": 44,
       "length": 4,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
-      "name": "crouching_start",
+      "name": "idle<>crouch",
       "first_frame": 182,
       "length": 5,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
-      "name": "crouching",
+      "name": "crouch",
       "first_frame": 104,
       "length": 1,
-      "loopable": true
+      "loopable": true,
+      "hold": 2
     },
     {
-      "name": "crouching_end",
+      "name": "crouch<>idle",
       "first_frame": 187,
       "length": 5,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
-      "name": "walk_start",
+      "name": "idle<>walk",
       "first_frame": 149,
       "length": 2,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
       "name": "walk",
       "first_frame": 151,
       "length": 12,
-      "loopable": true
+      "loopable": true,
+      "hold": 2
     },
     {
-      "name": "walk_end",
+      "name": "walk<>idle",
       "first_frame": 163,
       "length": 2,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
-      "name": "backwalk_start",
+      "name": "idle<>backwalk",
       "first_frame": 165,
       "length": 2,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     },
     {
       "name": "backwalk",
       "first_frame": 167,
       "length": 12,
-      "loopable": true
+      "loopable": true,
+      "hold": 2
     },
     {
-      "name": "backwalk_end",
+      "name": "backwalk<>idle",
       "first_frame": 179,
       "length": 3,
-      "loopable": false
+      "loopable": false,
+      "hold": 2
     }
   ]
 }

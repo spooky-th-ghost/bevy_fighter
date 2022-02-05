@@ -16,7 +16,8 @@ pub fn player_airdash(body: &mut CharacterBody, status: &mut CharacterStatus, fo
 
 pub fn execute_player_physics (
   mut player_data: ResMut<PlayerData>, 
-  mut query: Query<(&PlayerId, &mut CharacterStatus, &mut CharacterBody, &mut Transform)>
+  mut query: Query<(&PlayerId, &mut CharacterStatus, &mut CharacterBody, &mut Transform)>,
+  mut transition_writer: EventWriter<AnimationTransitionEvent>,
 ) {
   for (player_id, mut status, mut body, mut transform) in query.iter_mut() {
     let tv = body.get_target_velo();
@@ -24,6 +25,12 @@ pub fn execute_player_physics (
     if transform.translation.y < 0.0 {
       transform.translation.y = 0.0;
       status.land();
+      transition_writer.send(
+        AnimationTransitionEvent {
+          player_id: *player_id,
+          transition: AnimationStateTransition::FallToIdle
+        }
+      )
     }
 
     player_data.set_position(player_id, transform.translation);
@@ -83,6 +90,7 @@ pub fn update_debug_ui(
 pub fn determine_player_velocity_and_state (
   mut player_data: ResMut<PlayerData>, 
   mut query: Query<(&PlayerId, &mut CharacterStatus, &mut CharacterBody)>,
+  mut transition_writer: EventWriter<AnimationTransitionEvent>,
 ) {
   for (player_id, mut status, mut body) in query.iter_mut() {
     status.tick();
@@ -143,6 +151,16 @@ pub fn determine_player_velocity_and_state (
         };
         body.set_velocity(new_velocity);
         body.execute_jump(&mut status);
+      }
+    }
+    if status.get_should_transition() {
+      if let Some(transition) =  status.calculate_transition() {
+        transition_writer.send(
+    AnimationTransitionEvent {
+            player_id: *player_id,
+            transition,
+          }
+        )
       }
     }
   }

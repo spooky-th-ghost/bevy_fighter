@@ -17,4 +17,6 @@ pub enum FighterSystemLabels {
     StatusUpdate,
     PhysicsUpdate,
     PhysicsExecute,
+    AnimationUpdate,
+    AnimationExecute
 }

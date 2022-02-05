@@ -9,6 +9,7 @@ pub enum PlayerId {
 #[derive(Component, Clone, Copy, Debug)]
 pub struct CharacterStatus {
   pub action_state: ActionState,
+  pub previous_action_state: ActionState,
   pub movement_event: Option<MovementEvent>,
   pub busy: u8,
   pub jumpsquat: u8,
@@ -65,12 +66,87 @@ impl CharacterStatus {
     return self.airdashes_remaining > 0 && self.airdash_lockout == 0;
   }
 
+  pub fn get_should_transition(&self) -> bool {
+    return self.action_state != self.previous_action_state;
+  }
+
+  pub fn calculate_transition(&self) -> Option<AnimationStateTransition> {
+    match self.previous_action_state {
+      ActionState::DASHING => {
+        match self.action_state {
+          ActionState::JUMPSQUAT => return Some(AnimationStateTransition::DashToRise),
+          ActionState::STANDING =>  return Some(AnimationStateTransition::DashToIdle),
+          _ => return None
+        }
+      },
+      ActionState::WALKING => {
+        match self.action_state {
+          ActionState::JUMPSQUAT => return Some(AnimationStateTransition::WalkToRise),
+          ActionState::STANDING =>  return Some(AnimationStateTransition::WalkToIdle),
+          ActionState::DASHING => return Some(AnimationStateTransition::WalkToDash),
+          _ => return None
+        }
+      },
+      ActionState::BACKWALKING => {
+        match self.action_state {
+          ActionState::JUMPSQUAT => return Some(AnimationStateTransition::BackwalkToRise),
+          ActionState::STANDING =>  return Some(AnimationStateTransition::BackwalkToIdle),
+          ActionState::DASHING => return Some(AnimationStateTransition::BackwalkToBackdash),
+          _ => return None
+        }
+      },
+      ActionState::CROUCHING => {
+        match self.action_state {
+          ActionState::STANDING =>  return Some(AnimationStateTransition::CrouchToIdle),
+          _ => return None
+        }
+      },
+      ActionState::AIRBORNE => {
+        // match self.action_state { 
+        //   ActionState::STANDING => return Some(AnimationStateTransition::FallToIdle),
+        //   _ => return None,
+        // }
+        return None
+      }, // need to do the Rise_Fall_Split
+      ActionState::STANDING => {
+        match self.action_state {
+          ActionState::DASHING => return Some(AnimationStateTransition::IdleToDash),
+          ActionState::BACKDASHING =>  return Some(AnimationStateTransition::IdleToBackdash),
+          ActionState::WALKING => return Some(AnimationStateTransition::IdleToWalk),
+          ActionState::BACKWALKING => return Some(AnimationStateTransition::IdleToBackwalk),
+          ActionState::CROUCHING => return Some(AnimationStateTransition::IdleToCrouching),
+          _ => return None
+        }
+      },
+      ActionState::BACKDASHING => {
+        match self.action_state {
+          ActionState::STANDING => return Some(AnimationStateTransition::BackDashToIdle),
+          _ => return None
+        }
+      },
+      ActionState::AIR_DASHING => {
+        match self.action_state {
+          ActionState::AIRBORNE => return Some(AnimationStateTransition::AirdashToFall),
+          _ => return None
+        }
+      },
+      ActionState::AIR_BACKDASHING => {
+        match self.action_state {
+          ActionState::AIRBORNE => return Some(AnimationStateTransition::AirbackdashToFall),
+          _ => return None
+        }
+      },
+      _ => return None
+    }
+  }
+
   // Logic
 
   /// Reduce component timers by 1 frame
   pub fn tick(&mut self) {
     self.busy = countdown(self.busy);
     self.airdash_lockout = countdown(self.airdash_lockout);
+    self.previous_action_state = self.action_state;
   }
 
   // Run each frame to determine the players action state and if any movement events should be executed
@@ -289,30 +365,41 @@ pub enum MovementEventType {
 }
 
 pub trait SpawnPlayer {
-  fn spawn_player(&mut self, player_id: PlayerId);
+  fn spawn_player(
+    &mut self, 
+    player_id: PlayerId, 
+    character_prefix: &str, 
+    library: &AnimationLibrary,
+    texture_atlas: Handle<TextureAtlas>
+  );
 }
 
 impl SpawnPlayer for Commands<'_, '_> {
-  fn spawn_player(&mut self, player_id: PlayerId) {
-    let (transform, color, facing_vector) = match player_id {
+  fn spawn_player(
+    &mut self, 
+    player_id: PlayerId, 
+    character_prefix: &str, 
+    library: &AnimationLibrary,
+    texture_atlas: Handle<TextureAtlas>) {
+    let (transform, facing_vector, flip_x) = match player_id {
       PlayerId::P1 => (
         Transform::from_xyz(-40.0,0.0,0.0),
-        Color::TEAL,
-        1.0
+        1.0,
+        false
       ),
       PlayerId::P2 => (
         Transform::from_xyz(40.0,0.0,0.0),
-        Color::INDIGO,
-        -1.0
+        -1.0,
+        true
       )
     };
 
-    self.spawn_bundle(SpriteBundle {
-        sprite: Sprite{
-        color,
-        custom_size: Some(Vec2::new(30.0, 60.0)),
-        ..Default::default()
-      },
+    self.spawn_bundle(SpriteSheetBundle {
+        sprite: TextureAtlasSprite {
+          flip_x,
+          ..Default::default()
+        },
+        texture_atlas,
         transform,
         ..Default::default()
       })
@@ -321,7 +408,8 @@ impl SpawnPlayer for Commands<'_, '_> {
       .insert( CharacterBody {
         facing_vector,
         ..Default::default()
-      });
+      })
+      .insert(AnimationController::new(character_prefix, library));
   }
 }
 
@@ -329,6 +417,7 @@ impl Default for CharacterStatus {
   fn default() -> Self {
     CharacterStatus {
       action_state: ActionState::default(),
+      previous_action_state: ActionState::default(),
       movement_event: None,
       busy: 0,
       jumpsquat: 3,

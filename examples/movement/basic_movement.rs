@@ -60,14 +60,18 @@ fn manage_hitboxes(
 fn setup(
     mut coms: Commands,
     asset_server: Res<AssetServer>,
-    mut animation_library: ResMut<AnimationLibrary>, 
+    mut animation_library: ResMut<AnimationLibrary>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>> 
 ) {
+    let texture_handle = asset_server.load("sprites/roa.png");
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(256.0,256.0), 12, 16);
+    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+
     animation_library.load_character_sprite_data("roa","./src/roa.json");
     coms.spawn_bundle(OrthographicCameraBundle::new_2d());
     coms.spawn_bundle(UiCameraBundle::default());
-
-    coms.spawn_player(PlayerId::P1);
-    coms.spawn_player(PlayerId::P2);
+    coms.spawn_player(PlayerId::P1, "roa", &animation_library, texture_atlas_handle.clone());
+    coms.spawn_player(PlayerId::P2,"roa", &animation_library, texture_atlas_handle.clone());
     coms.spawn_debug_ui(PlayerId::P1, &asset_server.load("fonts/Roboto-Black.ttf"));
     coms.spawn_debug_ui(PlayerId::P2, &asset_server.load("fonts/Roboto-Black.ttf"));
 

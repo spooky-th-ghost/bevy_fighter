@@ -28,7 +28,10 @@ pub mod prelude {
     input::keyboard::KeyboardInput,
     core::FixedTimestep,
     ui::Val::*,
-    ecs::schedule::SystemLabel,
+    ecs::{
+      schedule::SystemLabel,
+      system::EntityCommands
+    },
     diagnostic::{
       Diagnostics,
       FrameTimeDiagnosticsPlugin, 

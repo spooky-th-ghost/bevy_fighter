@@ -6,6 +6,7 @@ impl Plugin for FighterPlugin {
     app
       .add_event::<FighterInputEvent>()
       .add_event::<CharacterMovementEvent>()
+      .add_event::<AnimationTransitionEvent>()
       .add_plugin(FrameTimeDiagnosticsPlugin)
       .insert_resource(AnimationLibrary::new())
       .insert_resource(PlayerData::default())
@@ -30,6 +31,16 @@ impl Plugin for FighterPlugin {
           execute_player_physics
             .label(FighterSystemLabels::PhysicsExecute)
             .after(FighterSystemLabels::PhysicsUpdate)
+        )
+        .with_system(
+          read_animation_transitions
+            .label(FighterSystemLabels::AnimationUpdate)
+            .after(FighterSystemLabels::PhysicsExecute)
+        )
+        .with_system(
+          animate_sprite_system
+            .label(FighterSystemLabels::AnimationExecute)
+            .after(FighterSystemLabels::AnimationUpdate)
         )
         .with_system(
           update_debug_ui
