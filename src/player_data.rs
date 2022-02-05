@@ -84,81 +84,112 @@ impl CharacterStatus {
   }
 
   pub fn calculate_transition(&self) -> Option<AnimationStateTransition> {
-    match self.previous_action_state {
-      ActionState::DASHING => {
-        match self.action_state {
-          ActionState::JUMPSQUAT => return Some(AnimationStateTransition::DashToRise),
-          ActionState::STANDING =>  return Some(AnimationStateTransition::DashToIdle),
-          ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
-          _ => return None
-        }
-      },
-      ActionState::WALKING => {
-        match self.action_state {
-          ActionState::JUMPSQUAT => return Some(AnimationStateTransition::WalkToRise),
-          ActionState::STANDING =>  return Some(AnimationStateTransition::WalkToIdle),
-          ActionState::DASHING => return Some(AnimationStateTransition::WalkToDash),
-          ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
-          _ => return None
-        }
-      },
-      ActionState::BACKWALKING => {
-        match self.action_state {
-          ActionState::JUMPSQUAT => return Some(AnimationStateTransition::BackwalkToRise),
-          ActionState::STANDING =>  return Some(AnimationStateTransition::BackwalkToIdle),
-          ActionState::DASHING => return Some(AnimationStateTransition::BackwalkToBackdash),
-          ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
-          _ => return None
-        }
-      },
-      ActionState::CROUCHING => {
-        match self.action_state {
-          ActionState::STANDING =>  return Some(AnimationStateTransition::CrouchToIdle),
-          ActionState::JUMPSQUAT => return Some(AnimationStateTransition::BackwalkToRise),
-          _ => return None
-        }
-      },
+
+    match self.action_state {
+      ActionState::JUMPSQUAT => return Some(AnimationStateTransition::ToRise),
+      ActionState::WALKING => return Some(AnimationStateTransition::ToWalk),
+      ActionState::BACKWALKING => return Some(AnimationStateTransition::ToBackwalk),
+      ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
+      ActionState::DASHING => return Some(AnimationStateTransition::ToDash),
+      ActionState::BACKDASHING => return Some(AnimationStateTransition::ToBackdash),
+      ActionState::AIR_DASHING => return Some(AnimationStateTransition::ToAirdash),
+      ActionState::AIR_BACKDASHING => return Some(AnimationStateTransition::ToAirBackdash),
       ActionState::AIRBORNE => {
-        match self.action_state { 
-          ActionState::AIR_DASHING => return Some(AnimationStateTransition::FallToAirdash),
-          ActionState::AIR_BACKDASHING => return Some(AnimationStateTransition::FallToAirbackdash),
+        match self.previous_action_state { 
+          ActionState::AIR_DASHING => return Some(AnimationStateTransition::AirdashToFall),
+          ActionState::AIR_BACKDASHING => return Some(AnimationStateTransition::AirbackdashToFall),
           _ => return None,
         }
-        return None
       }, // need to do the Rise_Fall_Split
       ActionState::STANDING => {
-        match self.action_state {
-          ActionState::DASHING => return Some(AnimationStateTransition::IdleToDash),
-          ActionState::BACKDASHING =>  return Some(AnimationStateTransition::IdleToBackdash),
-          ActionState::WALKING => return Some(AnimationStateTransition::IdleToWalk),
-          ActionState::BACKWALKING => return Some(AnimationStateTransition::IdleToBackwalk),
-          ActionState::CROUCHING => return Some(AnimationStateTransition::IdleToCrouching),
-          ActionState::JUMPSQUAT => return Some(AnimationStateTransition::BackwalkToRise),
-          _ => return None
-        }
-      },
-      ActionState::BACKDASHING => {
-        match self.action_state {
-          ActionState::STANDING => return Some(AnimationStateTransition::BackDashToIdle),
-          ActionState::BACKWALKING => return Some(AnimationStateTransition::BackDashToBackwalk),
-          ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
-          _ => return None
-        }
-      },
-      ActionState::AIR_DASHING => {
-        match self.action_state {
-          ActionState::AIRBORNE => return Some(AnimationStateTransition::AirdashToFall),
-          _ => return None
-        }
-      },
-      ActionState::AIR_BACKDASHING => {
-        match self.action_state {
-          ActionState::AIRBORNE => return Some(AnimationStateTransition::AirbackdashToFall),
+        match self.previous_action_state {
+          ActionState::DASHING => return Some(AnimationStateTransition::DashToIdle),
+          ActionState::BACKDASHING =>  return Some(AnimationStateTransition::BackDashToIdle),
+          ActionState::WALKING => return Some(AnimationStateTransition::WalkToIdle),
+          ActionState::BACKWALKING => return Some(AnimationStateTransition::BackwalkToIdle),
+          ActionState::CROUCHING => return Some(AnimationStateTransition::CrouchToIdle),
+          ActionState::AIRBORNE => return Some(AnimationStateTransition::FallToIdle),
           _ => return None
         }
       },
       _ => return None
     }
+    // match self.previous_action_state {
+    //   ActionState::DASHING => {
+    //     match self.action_state {
+    //       ActionState::JUMPSQUAT => return Some(AnimationStateTransition::ToRise),
+    //       ActionState::STANDING =>  return Some(AnimationStateTransition::DashToIdle),
+    //       ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
+    //       _ => return None
+    //     }
+    //   },
+    //   ActionState::WALKING => {
+    //     match self.action_state {
+    //       ActionState::JUMPSQUAT => return Some(AnimationStateTransition::ToRise),
+    //       ActionState::STANDING =>  return Some(AnimationStateTransition::WalkToIdle),
+    //       ActionState::DASHING => return Some(AnimationStateTransition::WalkToDash),
+    //       ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
+    //       _ => return None
+    //     }
+    //   },
+    //   ActionState::BACKWALKING => {
+    //     match self.action_state {
+    //       ActionState::JUMPSQUAT => return Some(AnimationStateTransition::ToRise),
+    //       ActionState::STANDING =>  return Some(AnimationStateTransition::BackwalkToIdle),
+    //       ActionState::DASHING => return Some(AnimationStateTransition::BackwalkToBackdash),
+    //       ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
+    //       _ => return None
+    //     }
+    //   },
+    //   ActionState::CROUCHING => {
+    //     match self.action_state {
+    //       ActionState::STANDING =>  return Some(AnimationStateTransition::CrouchToIdle),
+    //       ActionState::JUMPSQUAT => return Some(AnimationStateTransition::ToRise),
+    //       ActionState::WALKING => return Some(AnimationStateTransition::ToWalk),
+    //       ActionState::BACKWALKING => return Some(AnimationStateTransition::ToBackwalk),
+    //       _ => return None
+    //     }
+    //   },
+    //   ActionState::AIRBORNE => {
+    //     match self.action_state { 
+    //       ActionState::AIR_DASHING => return Some(AnimationStateTransition::FallToAirdash),
+    //       ActionState::AIR_BACKDASHING => return Some(AnimationStateTransition::FallToAirbackdash),
+    //       _ => return None,
+    //     }
+    //   }, // need to do the Rise_Fall_Split
+    //   ActionState::STANDING => {
+    //     match self.action_state {
+    //       ActionState::DASHING => return Some(AnimationStateTransition::IdleToDash),
+    //       ActionState::BACKDASHING =>  return Some(AnimationStateTransition::IdleToBackdash),
+    //       ActionState::WALKING => return Some(AnimationStateTransition::IdleToWalk),
+    //       ActionState::BACKWALKING => return Some(AnimationStateTransition::IdleToBackwalk),
+    //       ActionState::CROUCHING => return Some(AnimationStateTransition::IdleToCrouching),
+    //       ActionState::JUMPSQUAT => return Some(AnimationStateTransition::ToRise),
+    //       _ => return None
+    //     }
+    //   },
+    //   ActionState::BACKDASHING => {
+    //     match self.action_state {
+    //       ActionState::STANDING => return Some(AnimationStateTransition::BackDashToIdle),
+    //       ActionState::BACKWALKING => return Some(AnimationStateTransition::BackDashToBackwalk),
+    //       ActionState::CROUCHING => return Some(AnimationStateTransition::ToCrouch),
+    //       _ => return None
+    //     }
+    //   },
+    //   ActionState::AIR_DASHING => {
+    //     match self.action_state {
+    //       ActionState::AIRBORNE => return Some(AnimationStateTransition::AirdashToFall),
+    //       _ => return None
+    //     }
+    //   },
+    //   ActionState::AIR_BACKDASHING => {
+    //     match self.action_state {
+    //       ActionState::AIRBORNE => return Some(AnimationStateTransition::AirbackdashToFall),
+    //       _ => return None
+    //     }
+    //   },
+    //   _ => return None
+    // }
   }
 
   // Logic
@@ -463,7 +494,7 @@ impl Default for CharacterBody {
       air_dash_speed: 8.0,
       air_back_dash_speed: 6.0,
       gravity: 1.0,
-      jump_height: 15.0,
+      jump_height: 20.0,
       max_airdash_time: 25,
       max_air_backdash_time: 15,
       airdash_time: 0,

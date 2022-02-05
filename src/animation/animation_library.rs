@@ -104,35 +104,24 @@ impl AnimationTransitionEvent {
 
 #[derive(Clone, Copy)]
 pub enum AnimationStateTransition {
-  IdleToDash,
-  IdleToBackdash,
-  IdleToRise,
-  IdleToWalk,
-  IdleToBackwalk,
-  IdleToCrouching,
-  WalkToRise,
   WalkToIdle,
-  WalkToDash,
-  BackwalkToRise,
   BackwalkToIdle,
-  BackwalkToBackdash,
   CrouchToIdle,
-  DashToRise,
   DashToIdle,
   BackDashToIdle,
-  BackDashToBackwalk,
-  RiseToAirdash,
-  RiseToAirbackdash,
   RiseToFall,
-  RiseToRise,
-  FallToRise,
-  FallToAirdash,
-  FallToAirbackdash,
   FallToIdle,
   AirdashToFall,
   AirbackdashToFall,
   //Absolute Transitions
   ToCrouch,
+  ToWalk,
+  ToBackwalk,
+  ToDash,
+  ToBackdash,
+  ToRise,
+  ToAirdash,
+  ToAirBackdash,
 }
 
 #[derive(Debug, Component)]
@@ -233,7 +222,7 @@ impl AnimationController {
 
   pub fn transition(&mut self, transition: AnimationStateTransition) {
     match transition {
-      AnimationStateTransition::IdleToDash => {
+      AnimationStateTransition::ToDash => {
         self.animation_state = AnimationState::SMEARING;
         self.smear_animation = self.get_animation(format!("{}_idle<>dash", self.character_prefix));
         let core_animation = self.get_animation(format!("{}_dash", self.character_prefix));
@@ -241,7 +230,7 @@ impl AnimationController {
           self.core_animation = ca;
         }
       },
-      AnimationStateTransition::IdleToBackdash => {
+      AnimationStateTransition::ToBackdash => {
         self.animation_state = AnimationState::SMEARING;
         self.smear_animation = self.get_animation(format!("{}_idle<>backdash", self.character_prefix));
         let core_animation = self.get_animation(format!("{}_backdash", self.character_prefix));
@@ -249,12 +238,7 @@ impl AnimationController {
           self.core_animation = ca;
         }
       },
-      AnimationStateTransition::IdleToRise 
-      | AnimationStateTransition::WalkToRise 
-      | AnimationStateTransition::BackwalkToRise 
-      | AnimationStateTransition::DashToRise 
-      | AnimationStateTransition::RiseToRise
-      | AnimationStateTransition::FallToRise => {
+      AnimationStateTransition::ToRise => {
         self.animation_state = AnimationState::SMEARING;
         self.smear_animation = self.get_animation(format!("{}_jumpsquat", self.character_prefix));
         let core_animation = self.get_animation(format!("{}_rise", self.character_prefix));
@@ -262,7 +246,7 @@ impl AnimationController {
           self.core_animation = ca;
         }
       },
-      AnimationStateTransition::IdleToWalk => {
+      AnimationStateTransition::ToWalk => {
         self.animation_state = AnimationState::SMEARING;
         self.smear_animation = self.get_animation(format!("{}_idle<>walk", self.character_prefix));
         let core_animation = self.get_animation(format!("{}_walk", self.character_prefix));
@@ -270,7 +254,7 @@ impl AnimationController {
           self.core_animation = ca;
         }
       },
-      AnimationStateTransition::IdleToBackwalk => {
+      AnimationStateTransition::ToBackwalk => {
         self.animation_state = AnimationState::SMEARING;
         self.smear_animation = self.get_animation(format!("{}_idle<>backwalk", self.character_prefix));
         let core_animation = self.get_animation(format!("{}_backwalk", self.character_prefix));
@@ -278,7 +262,7 @@ impl AnimationController {
           self.core_animation = ca;
         }
       },
-      AnimationStateTransition::IdleToCrouching => {
+      AnimationStateTransition::ToCrouch => {
         self.animation_state = AnimationState::SMEARING;
         self.smear_animation = self.get_animation(format!("{}_idle<>crouch", self.character_prefix));
         let core_animation = self.get_animation(format!("{}_crouch", self.character_prefix));
@@ -294,26 +278,10 @@ impl AnimationController {
           self.core_animation = ca;
         }
       },
-      AnimationStateTransition::WalkToDash => {
-        self.animation_state = AnimationState::LOOPING;
-        self.smear_animation = None;
-        let core_animation = self.get_animation(format!("{}_dash", self.character_prefix));
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
       AnimationStateTransition::BackwalkToIdle => {
         self.animation_state = AnimationState::SMEARING;
         self.smear_animation = self.get_animation(format!("{}_backwalk<>idle", self.character_prefix));
         let core_animation = self.get_animation(format!("{}_idle", self.character_prefix));
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationStateTransition::BackwalkToBackdash => {
-        self.animation_state = AnimationState::LOOPING;
-        self.smear_animation = None;
-        let core_animation = self.get_animation(format!("{}_backdash", self.character_prefix));
         if let Some(ca) = core_animation {
           self.core_animation = ca;
         }
@@ -334,8 +302,7 @@ impl AnimationController {
           self.core_animation = ca;
         }
       },
-      AnimationStateTransition::RiseToAirdash
-      | AnimationStateTransition::FallToAirdash => {
+      AnimationStateTransition::ToAirdash => {
         self.animation_state = AnimationState::SMEARING;
         self.smear_animation = self.get_animation(format!("{}_fall<>airdash", self.character_prefix));
         let core_animation = self.get_animation(format!("{}_airdash", self.character_prefix));
@@ -343,8 +310,7 @@ impl AnimationController {
           self.core_animation = ca;
         }
       },
-      AnimationStateTransition::RiseToAirbackdash
-      | AnimationStateTransition::FallToAirbackdash => {
+      AnimationStateTransition::ToAirBackdash => {
         self.animation_state = AnimationState::SMEARING;
         self.smear_animation = self.get_animation(format!("{}_fall<>backairdash", self.character_prefix));
         let core_animation = self.get_animation(format!("{}_backairdash", self.character_prefix));
@@ -388,22 +354,6 @@ impl AnimationController {
         self.animation_state = AnimationState::SMEARING;
         self.smear_animation = self.get_animation(format!("{}_crouch<>idle", self.character_prefix));
         let core_animation = self.get_animation(format!("{}_idle", self.character_prefix));
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationStateTransition::BackDashToBackwalk => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation(format!("{}_backdash<>idle", self.character_prefix));
-        let core_animation = self.get_animation(format!("{}_backwalk", self.character_prefix));
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationStateTransition::ToCrouch => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation(format!("{}_idle<>crouch", self.character_prefix));
-        let core_animation = self.get_animation(format!("{}_crouch", self.character_prefix));
         if let Some(ca) = core_animation {
           self.core_animation = ca;
         }
