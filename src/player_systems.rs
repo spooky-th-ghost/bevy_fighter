@@ -28,7 +28,7 @@ pub fn execute_player_physics (
       transition_writer.send(
         AnimationTransitionEvent {
           player_id: *player_id,
-          transition: AnimationStateTransition::FallToIdle
+          transition: AnimationTransition::FallToIdle
         }
       )
     }
