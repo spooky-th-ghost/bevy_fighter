@@ -1,0 +1,200 @@
+{
+  "animations": [
+    {
+      "name": "idle",
+      "first_frame": 0,
+      "length": 16,
+      "loopable": true,
+      "hold": 4
+    },
+    {
+      "name": "idle<>dash",
+      "first_frame": 140,
+      "length": 2,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "dash",
+      "first_frame": 142,
+      "length": 12,
+      "loopable": true,
+      "hold": 4
+    },
+    {
+      "name": "dash<>idle",
+      "first_frame": 154,
+      "length": 6,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "idle<>backdash",
+      "first_frame": 160,
+      "length": 7,
+      "loopable": false,
+      "hold": 1
+    },
+    {
+      "name": "backdash",
+      "first_frame": 167,
+      "length": 3,
+      "loopable": true,
+      "hold": 2
+    },
+    {
+      "name": "backdash<>idle",
+      "first_frame": 170,
+      "length": 5,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "fall<>airdash",
+      "first_frame": 324,
+      "length": 1,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "airdash",
+      "first_frame": 325,
+      "length": 2,
+      "loopable": true,
+      "hold": 2
+    },
+    {
+      "name": "airdash<>fall",
+      "first_frame": 327,
+      "length": 3,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "fall<>backairdash",
+      "first_frame": 175,
+      "length": 4,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "backairdash",
+      "first_frame": 179,
+      "length": 3,
+      "loopable": true,
+      "hold": 2
+    },
+    {
+      "name": "backairdash<>fall",
+      "first_frame": 182,
+      "length": 6,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "jumpsquat",
+      "first_frame": 188,
+      "length": 5,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "rise",
+      "first_frame": 193,
+      "length": 3,
+      "loopable": true,
+      "hold": 2
+    },
+    {
+      "name": "rise<>fall",
+      "first_frame": 196,
+      "length": 3,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "fall",
+      "first_frame": 199,
+      "length": 3,
+      "loopable": true,
+      "hold": 2
+    },
+    {
+      "name": "fall<>idle",
+      "first_frame": 202,
+      "length": 7,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "airdash<>fall",
+      "first_frame": 44,
+      "length": 4,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "idle<>crouch",
+      "first_frame": 308,
+      "length": 6,
+      "loopable": false,
+      "hold": 1
+    },
+    {
+      "name": "crouch",
+      "first_frame": 314,
+      "length": 1,
+      "loopable": true,
+      "hold": 2
+    },
+    {
+      "name": "crouch<>idle",
+      "first_frame": 315,
+      "length": 4,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "idle<>walk",
+      "first_frame": 288,
+      "length": 2,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "walk",
+      "first_frame": 290,
+      "length": 8,
+      "loopable": true,
+      "hold": 4
+    },
+    {
+      "name": "walk<>idle",
+      "first_frame": 0,
+      "length": 1,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "idle<>backwalk",
+      "first_frame": 298,
+      "length": 2,
+      "loopable": false,
+      "hold": 2
+    },
+    {
+      "name": "backwalk",
+      "first_frame": 300,
+      "length": 8,
+      "loopable": true,
+      "hold": 4
+    },
+    {
+      "name": "backwalk<>idle",
+      "first_frame": 0,
+      "length": 1,
+      "loopable": false,
+      "hold": 2
+    }
+  ]
+}
