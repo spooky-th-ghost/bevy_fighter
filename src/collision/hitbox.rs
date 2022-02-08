@@ -195,8 +195,7 @@ fn set_collision_box_alpha(mut sprite: Sprite, alpha: f32) {
 pub fn spawn_hitbox(
     commands: &mut Commands,  
     color: Color, 
-    parent_entity: Entity, 
-    player_id: u8, 
+    parent_entity: Entity,
     hitbox_size: Vec2, 
     hitbox_position: Vec2,
     hitbox: Hitbox

@@ -30,10 +30,8 @@ pub struct CharacterStatus {
   pub jump_height: f32,
   pub max_airdash_time: u8,
   pub max_air_backdash_time: u8,
-  pub airdash_time: u8,
   pub int_force: Option<InterpolatedForce>,
   pub backdash: Backdash,
-  pub jumpdata: Option<JumpData>,
 }
 
 impl CharacterStatus {
@@ -96,9 +94,7 @@ impl CharacterStatus {
       | ActionState::AIRBORNE
       | ActionState::WALKING
       | ActionState::BACKWALKING
-      | ActionState::CROUCHING
-      | ActionState::DASHING
-      | ActionState::JUMPSQUAT => return true,
+      | ActionState::CROUCHING => return true,
       _ => return false,
     }
   }
@@ -106,18 +102,18 @@ impl CharacterStatus {
   pub fn calculate_transition(&self) -> Option<AnimationTransition> {
 
     match self.action_state {
-      ActionState::JUMPSQUAT => return Some(AnimationTransition::ToRise),
+      ActionState::JUMPSQUAT {squat: _, velocity: _} => return Some(AnimationTransition::ToRise),
       ActionState::WALKING => return Some(AnimationTransition::ToWalk),
       ActionState::BACKWALKING => return Some(AnimationTransition::ToBackwalk),
       ActionState::CROUCHING => return Some(AnimationTransition::ToCrouch),
       ActionState::DASHING => return Some(AnimationTransition::ToDash),
       ActionState::BACKDASHING => return Some(AnimationTransition::ToBackdash),
-      ActionState::AIR_DASHING {velocity: _} => return Some(AnimationTransition::ToAirdash),
-      ActionState::AIR_BACKDASHING {velocity: _} => return Some(AnimationTransition::ToAirBackdash),
+      ActionState::AIR_DASHING {duration: _, velocity: _} => return Some(AnimationTransition::ToAirdash),
+      ActionState::AIR_BACKDASHING {duration: _, velocity: _} => return Some(AnimationTransition::ToAirBackdash),
       ActionState::AIRBORNE => {
         match self.previous_action_state { 
-          ActionState::AIR_DASHING {velocity: _} => return Some(AnimationTransition::AirdashToFall),
-          ActionState::AIR_BACKDASHING {velocity: _} => return Some(AnimationTransition::AirbackdashToFall),
+          ActionState::AIR_DASHING {duration:_, velocity: _} => return Some(AnimationTransition::AirdashToFall),
+          ActionState::AIR_BACKDASHING {duration:_, velocity: _} => return Some(AnimationTransition::AirbackdashToFall),
           _ => return None,
         }
       }, // need to do the Rise_Fall_Split
@@ -142,8 +138,8 @@ impl CharacterStatus {
   pub fn tick(&mut self) {
     self.busy = countdown(self.busy);
     self.airdash_lockout = countdown(self.airdash_lockout);
-    self.airdash_time = countdown(self.airdash_time);
     self.previous_action_state = self.action_state;
+    self.action_state.tick();
   }
 
   // Run each frame to determine the players action state and if any movement events should be executed
@@ -160,16 +156,13 @@ impl CharacterStatus {
           4 => self.action_state = ActionState::BACKWALKING,
           1 | 2 | 3 => self.action_state = ActionState::CROUCHING,
           7 | 8 => {
-            self.action_state = ActionState::JUMPSQUAT; 
-            self.movement_event = Some(MovementEvent::new(MovementEventType::JUMP, buffer.current_motion));
+            self.buffer_jump(buffer.current_motion, false,false, false);
           },
           9 => {
             if self.action_state == ActionState::DASHING {
-              self.action_state = ActionState::JUMPSQUAT; 
-              self.movement_event = Some(MovementEvent::new(MovementEventType::DASHJUMP, buffer.current_motion));
+              self.buffer_jump(buffer.current_motion, false,true, false);
             } else {
-              self.action_state = ActionState::JUMPSQUAT; 
-              self.movement_event = Some(MovementEvent::new(MovementEventType::JUMP, buffer.current_motion));
+              self.buffer_jump(buffer.current_motion, false,false, false);
             }
           }
           _ => ()
@@ -193,13 +186,15 @@ impl CharacterStatus {
         if let Some(ct) = buffer.command_type {
           match ct {
             CommandType::DASH => {
-              self.action_state = ActionState::AIR_DASHING {velocity: Vec2::X * self.air_dash_speed * self.facing_vector};
-              self.movement_event = Some(MovementEvent::new(MovementEventType::AIRDASH,buffer.current_motion));
+              // self.action_state = ActionState::AIR_DASHING {velocity: Vec2::X * self.air_dash_speed * self.facing_vector};
+              // self.movement_event = Some(MovementEvent::new(MovementEventType::AIRDASH,buffer.current_motion));
+              self.buffer_airdash(true);
               buffer.consume_motion();
             },
             CommandType::BACK_DASH =>  {
-              self.action_state = ActionState::AIR_BACKDASHING {velocity: Vec2::X * self.air_dash_speed * -self.facing_vector };
-              self.movement_event = Some(MovementEvent::new(MovementEventType::AIRBACKDASH,buffer.current_motion));
+              // self.action_state = ActionState::AIR_BACKDASHING {velocity: Vec2::X * self.air_dash_speed * -self.facing_vector };
+              // self.movement_event = Some(MovementEvent::new(MovementEventType::AIRBACKDASH,buffer.current_motion));
+              self.buffer_airdash(false);
               buffer.consume_motion();
             },
             _ => ()
@@ -247,30 +242,65 @@ impl CharacterStatus {
     } else {
       3
     };
-    self.jumpdata = Some(JumpData::new(x_velocity, squat, superjump));
+
+    let y_velocity = if airborne {
+      if superjump {
+        self.jump_height
+      } else {
+        self.jump_height * 0.75 
+      }
+    } else {
+      if superjump {
+        self.jump_height * 1.25
+      } else {
+        self.jump_height
+      }
+    };
+
+    let velocity = Vec2::new(x_velocity, y_velocity);
+    self.busy = {
+      if airborne {
+        3
+      } else {
+        12
+      }
+    };
+    self.action_state = if airborne {
+      ActionState::AIR_JUMPSQUAT { squat, velocity}
+    } else {
+      ActionState::JUMPSQUAT {squat, velocity}
+    };
   }
 
-  pub fn execute_jump(&mut self) {
-    if let Some(jd) = self.jumpdata.as_mut() {
-      if jd.squat > 0 {
-        jd.tick();
+  pub fn buffer_airdash(&mut self, forward: bool) {
+    if self.get_can_airdash() {
+      self.airdashes_remaining = countdown(self.air_jumps_remaining);
+      self.busy = 5;
+      self.airdash_lockout = 15;
+
+      if forward {
+        self.action_state = ActionState::AIR_DASHING {duration: self.max_airdash_time, velocity: Vec2::X * self.air_dash_speed * self.facing_vector};
       } else {
-        let jumpheight = if self.is_grounded {
-          self.jump_height
-        } else {
-          self.jump_height * 0.75
-        };
-        self.velocity = Vec2::new(jd.x_velocity, jumpheight);
-        self.is_grounded = false;
-        self.jumpdata = None;
-        self.set_action_state(ActionState::AIRBORNE);
+        self.action_state = ActionState::AIR_BACKDASHING {duration: self.max_air_backdash_time, velocity: Vec2::X * self.air_dash_speed * -self.facing_vector };
       }
     }
   }
 
-  pub fn execute_backdash(&mut self) {//(InterpolatedForce, u8) {
-    //25.0,20,20
+  pub fn execute_jump(&mut self) {
+    if self.action_state.is_finished_jumping() {
+      self.is_grounded = false;
+      self.velocity = self.action_state.get_jump_velocity();
+      self.action_state = ActionState::AIRBORNE;
+    }
+  }
 
+  pub fn execute_airdash(&mut self) {
+    if self.action_state.is_finished_airdashing() {
+      self.action_state = ActionState::AIRBORNE;
+    }
+  }
+
+  pub fn execute_backdash(&mut self) {
     match self.backdash {
       Backdash::STANDARD {speed, busy, motion_duration} => {
         let int_force = InterpolatedForce::new(
@@ -283,12 +313,6 @@ impl CharacterStatus {
       },
       _ => ()
     }
-    
-    // return (
-    //   InterpolatedForce::new(
-
-    //   )
-    // ); //self.backdash.exec(self.facing_vector);
   }
 }
 
@@ -381,14 +405,12 @@ impl Default for CharacterStatus {
       jump_height: 20.0,
       max_airdash_time: 25,
       max_air_backdash_time: 15,
-      airdash_time: 0,
       int_force: None,
       backdash: Backdash::STANDARD{
         speed: 25.0,
         busy: 20,
         motion_duration: 20
-      },
-      jumpdata: None
+      }
     }
   }
 }

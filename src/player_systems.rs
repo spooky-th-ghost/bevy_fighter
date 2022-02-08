@@ -1,19 +1,5 @@
 use crate::prelude::*;
 
-pub fn player_airdash(status: &mut CharacterStatus, forward: bool) {
-  if status.get_can_airdash() {
-    status.airdashes_remaining = countdown(status.airdashes_remaining);
-    status.busy = 5;
-    status.airdash_lockout = 15;
-
-    if forward {
-      status.airdash_time = status.max_airdash_time;
-    } else {
-      status.airdash_time = status.max_air_backdash_time;
-    }
-  }
-}
-
 pub fn execute_player_physics (
   mut player_data: ResMut<PlayerData>, 
   mut query: Query<(&PlayerId, &mut CharacterStatus, &mut Transform, &mut TextureAtlasSprite)>,
@@ -37,7 +23,6 @@ pub fn execute_player_physics (
     let facing_vector = player_data.get_facing_vector(player_id);
     if status.can_turn() {
       sprite.flip_x = facing_vector < 0.0; 
-      status.set_facing_vector(facing_vector);
       status.set_facing_vector(facing_vector);
     }
   }
@@ -67,7 +52,6 @@ pub fn update_debug_ui(
     my_strings.push(format!("Airdashes: {:?} \n", status.airdashes_remaining));
     my_strings.push(format!("Airdash Lockout: {:?} \n", status.airdash_lockout));
     my_strings.push(format!("Velocity: {:?} \n", status.velocity));
-    my_strings.push(format!("Airdash Time: {:?} \n", status.airdash_time));
     my_strings.push(format!("Facing Vector: {:?} \n", status.facing_vector));
     my_strings.push(format!("FPS: {:.1}", fps));
     let strings_to_push = my_strings.clone();
@@ -87,7 +71,6 @@ pub fn update_debug_ui(
       text.sections[5].value = player_text[index][5].clone();
       text.sections[6].value = player_text[index][6].clone();
       text.sections[7].value = player_text[index][7].clone();
-      text.sections[8].value = player_text[index][8].clone();
   }
 }
 
@@ -105,47 +88,19 @@ pub fn determine_player_velocity_and_state (
         if let Some(me) = status.movement_event {
           match me.event_type {
             MovementEventType::BACKDASH => status.execute_backdash(),
-            MovementEventType::JUMP => {
-              status.buffer_jump(me.motion, false, false, false);
-              status.set_busy(12);
-            },
-            MovementEventType::DASHJUMP => {
-              status.buffer_jump(me.motion, false, true, false);
-              status.set_busy(12);
-            },
-            MovementEventType::SUPERJUMP => {
-              status.buffer_jump(me.motion, true, false, false);
-              status.set_busy(12);
-            },
-            MovementEventType::AIRDASH => {
-              if status.get_can_airdash() {
-                player_airdash( &mut status, true);
-              }
-            },
-            MovementEventType::AIRBACKDASH => {
-              if status.get_can_airdash() {
-                player_airdash( &mut status, false);
-              }
-            },
             _ => ()
           }
           status.clear_movement_event();
         }
 
-        if status.airdash_time == 0 {
-          match status.get_action_state() {
-            ActionState::AIR_DASHING {velocity: _} | ActionState::AIR_BACKDASHING {velocity: _} => status.set_action_state(ActionState::AIRBORNE),
-            _ => (),
-          }
-        }
-
+        status.execute_airdash();
         let new_velocity = match status.get_action_state() {
           ActionState::WALKING => Vec2::new(status.walk_speed * status.facing_vector, 0.0),
           ActionState::BACKWALKING => Vec2::new(-status.back_walk_speed * status.facing_vector, 0.0),
           ActionState::DASHING => Vec2::new(status.dash_speed * status.facing_vector,0.0),
           ActionState::AIRBORNE => status.velocity - (Vec2::Y * status.gravity),
-          ActionState::AIR_DASHING {velocity} => velocity,
-          ActionState::AIR_BACKDASHING {velocity} => velocity,
+          ActionState::AIR_DASHING {duration: _, velocity} => velocity,
+          ActionState::AIR_BACKDASHING {duration: _, velocity} => velocity,
           ActionState::STANDING => Vec2::ZERO,
           _ => status.velocity.custom_lerp(Vec2::ZERO, 0.5),
         };
