@@ -210,5 +210,11 @@
       "loopable": false,
       "hold": 1
     }
+  ],
+  "attacks": [
+
+  ],
+  "hitboxes": [
+    
   ]
 }

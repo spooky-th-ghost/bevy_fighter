@@ -113,7 +113,6 @@ pub enum AnimationTransition {
   FallToIdle,
   AirdashToFall,
   AirbackdashToFall,
-  //Absolute Transitions
   ToCrouch,
   ToWalk,
   ToBackwalk,
@@ -377,10 +376,9 @@ pub fn read_animation_transitions(
 }
 
 pub fn animate_sprite_system(
-    mut query: Query<(&PlayerId, &mut TextureAtlasSprite, &mut AnimationController)>,
+    mut query: Query<(&mut TextureAtlasSprite, &mut AnimationController)>,
 ) {
-  for (player_id,mut sprite, mut anim_controller) in query.iter_mut() {
+  for (mut sprite, mut anim_controller) in query.iter_mut() {
     sprite.index = anim_controller.get_next_frame();
-    if *player_id == PlayerId::P2 {println!("{:?}", sprite.index);}
   }
 }

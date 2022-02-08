@@ -10,6 +10,7 @@ pub enum PlayerId {
 pub struct CharacterStatus {
   pub action_state: ActionState,
   pub previous_action_state: ActionState,
+  pub facing_vector: f32,
   pub movement_event: Option<MovementEvent>,
   pub busy: u8,
   pub jumpsquat: u8,
@@ -19,6 +20,18 @@ pub struct CharacterStatus {
   pub airdashes: u8,
   pub airdashes_remaining: u8,
   pub airdash_lockout: u8,
+  pub air_dash_speed: f32,
+  pub air_back_dash_speed: f32,
+  pub velocity: Vec2,
+  pub walk_speed: f32,
+  pub back_walk_speed: f32,
+  pub dash_speed: f32,
+  pub gravity: f32,
+  pub jump_height: f32,
+  pub max_airdash_time: u8,
+  pub max_air_backdash_time: u8,
+  pub int_force: Option<InterpolatedForce>,
+  pub backdash: Backdash,
 }
 
 impl CharacterStatus {
@@ -27,6 +40,11 @@ impl CharacterStatus {
   /// Set a players ActionState
   pub fn set_action_state(&mut self, action_state: ActionState) {
     self.action_state = action_state
+  }
+
+  /// Set the players facing direction
+  pub fn set_facing_vector(&mut self, facing_vector: f32) {
+    self.facing_vector = facing_vector;
   }
 
   /// Set a players busy value, which translates to how many frames it will be until the players inputs will be read again
@@ -76,9 +94,7 @@ impl CharacterStatus {
       | ActionState::AIRBORNE
       | ActionState::WALKING
       | ActionState::BACKWALKING
-      | ActionState::CROUCHING
-      | ActionState::DASHING
-      | ActionState::JUMPSQUAT => return true,
+      | ActionState::CROUCHING => return true,
       _ => return false,
     }
   }
@@ -86,18 +102,18 @@ impl CharacterStatus {
   pub fn calculate_transition(&self) -> Option<AnimationTransition> {
 
     match self.action_state {
-      ActionState::JUMPSQUAT => return Some(AnimationTransition::ToRise),
+      ActionState::JUMPSQUAT {squat: _, velocity: _} => return Some(AnimationTransition::ToRise),
       ActionState::WALKING => return Some(AnimationTransition::ToWalk),
       ActionState::BACKWALKING => return Some(AnimationTransition::ToBackwalk),
       ActionState::CROUCHING => return Some(AnimationTransition::ToCrouch),
       ActionState::DASHING => return Some(AnimationTransition::ToDash),
       ActionState::BACKDASHING => return Some(AnimationTransition::ToBackdash),
-      ActionState::AIR_DASHING => return Some(AnimationTransition::ToAirdash),
-      ActionState::AIR_BACKDASHING => return Some(AnimationTransition::ToAirBackdash),
+      ActionState::AIR_DASHING {duration: _, velocity: _} => return Some(AnimationTransition::ToAirdash),
+      ActionState::AIR_BACKDASHING {duration: _, velocity: _} => return Some(AnimationTransition::ToAirBackdash),
       ActionState::AIRBORNE => {
         match self.previous_action_state { 
-          ActionState::AIR_DASHING => return Some(AnimationTransition::AirdashToFall),
-          ActionState::AIR_BACKDASHING => return Some(AnimationTransition::AirbackdashToFall),
+          ActionState::AIR_DASHING {duration:_, velocity: _} => return Some(AnimationTransition::AirdashToFall),
+          ActionState::AIR_BACKDASHING {duration:_, velocity: _} => return Some(AnimationTransition::AirbackdashToFall),
           _ => return None,
         }
       }, // need to do the Rise_Fall_Split
@@ -123,6 +139,7 @@ impl CharacterStatus {
     self.busy = countdown(self.busy);
     self.airdash_lockout = countdown(self.airdash_lockout);
     self.previous_action_state = self.action_state;
+    self.action_state.tick();
   }
 
   // Run each frame to determine the players action state and if any movement events should be executed
@@ -139,16 +156,13 @@ impl CharacterStatus {
           4 => self.action_state = ActionState::BACKWALKING,
           1 | 2 | 3 => self.action_state = ActionState::CROUCHING,
           7 | 8 => {
-            self.action_state = ActionState::JUMPSQUAT; 
-            self.movement_event = Some(MovementEvent::new(MovementEventType::JUMP, buffer.current_motion));
+            self.buffer_jump(buffer.current_motion, false,false, false);
           },
           9 => {
             if self.action_state == ActionState::DASHING {
-              self.action_state = ActionState::JUMPSQUAT; 
-              self.movement_event = Some(MovementEvent::new(MovementEventType::DASHJUMP, buffer.current_motion));
+              self.buffer_jump(buffer.current_motion, false,true, false);
             } else {
-              self.action_state = ActionState::JUMPSQUAT; 
-              self.movement_event = Some(MovementEvent::new(MovementEventType::JUMP, buffer.current_motion));
+              self.buffer_jump(buffer.current_motion, false,false, false);
             }
           }
           _ => ()
@@ -172,13 +186,11 @@ impl CharacterStatus {
         if let Some(ct) = buffer.command_type {
           match ct {
             CommandType::DASH => {
-              self.action_state = ActionState::AIR_DASHING;
-              self.movement_event = Some(MovementEvent::new(MovementEventType::AIRDASH,buffer.current_motion));
+              self.buffer_airdash(true);
               buffer.consume_motion();
             },
             CommandType::BACK_DASH =>  {
-              self.action_state = ActionState::AIR_BACKDASHING;
-              self.movement_event = Some(MovementEvent::new(MovementEventType::AIRBACKDASH,buffer.current_motion));
+              self.buffer_airdash(false);
               buffer.consume_motion();
             },
             _ => ()
@@ -186,34 +198,6 @@ impl CharacterStatus {
         }
       }
     }
-  }
-}
-
-
-
-#[derive(Component)]
-pub struct CharacterBody {
-	pub velocity: Vec2,
-  pub facing_vector: f32,
-  pub walk_speed: f32,
-  pub back_walk_speed: f32,
-  pub dash_speed: f32,
-  pub air_dash_speed: f32,
-  pub air_back_dash_speed: f32,
-  pub gravity: f32,
-  pub jump_height: f32,
-  pub max_airdash_time: u8,
-  pub max_air_backdash_time: u8,
-  pub airdash_time: u8,
-  pub int_force: Option<InterpolatedForce>,
-  pub backdash: Box<dyn Backdash>,
-  pub jumpdata: Option<JumpData>,
-}
-
-impl CharacterBody {
-  /// Set the players facing direction
-  pub fn set_facing_vector(&mut self, facing_vector: f32) {
-    self.facing_vector = facing_vector;
   }
 
   /// Set the players velocity
@@ -254,36 +238,86 @@ impl CharacterBody {
     } else {
       3
     };
-    self.jumpdata = Some(JumpData::new(x_velocity, squat, superjump));
+
+    let y_velocity = if airborne {
+      if superjump {
+        self.jump_height
+      } else {
+        self.jump_height * 0.75 
+      }
+    } else {
+      if superjump {
+        self.jump_height * 1.25
+      } else {
+        self.jump_height
+      }
+    };
+
+    let velocity = Vec2::new(x_velocity, y_velocity);
+    self.busy = {
+      if airborne {
+        3
+      } else {
+        12
+      }
+    };
+    self.action_state = if airborne {
+      ActionState::AIR_JUMPSQUAT { squat, velocity}
+    } else {
+      ActionState::JUMPSQUAT {squat, velocity}
+    };
   }
 
-  pub fn execute_jump(&mut self, status: &mut CharacterStatus) {
-    if let Some(jd) = self.jumpdata.as_mut() {
-      if jd.squat > 0 {
-        jd.tick();
+  pub fn buffer_airdash(&mut self, forward: bool) {
+    if self.get_can_airdash() {
+      self.airdashes_remaining = countdown(self.air_jumps_remaining);
+      self.busy = 5;
+      self.airdash_lockout = 15;
+
+      if forward {
+        self.action_state = ActionState::AIR_DASHING {duration: self.max_airdash_time, velocity: Vec2::X * self.air_dash_speed * self.facing_vector};
       } else {
-        let jumpheight = if status.get_is_grounded() {
-          self.jump_height
-        } else {
-          self.jump_height * 0.75
-        };
-        self.velocity = Vec2::new(jd.x_velocity, jumpheight);
-        status.is_grounded = false;
-        self.jumpdata = None;
-        status.set_action_state(ActionState::AIRBORNE);
+        self.action_state = ActionState::AIR_BACKDASHING {duration: self.max_air_backdash_time, velocity: Vec2::X * self.air_dash_speed * -self.facing_vector };
       }
     }
   }
 
-  pub fn exec_backdash(&self) -> (InterpolatedForce, u8) {
-    return self.backdash.exec(self.facing_vector);
+  pub fn execute_jump(&mut self) {
+    if self.action_state.is_finished_jumping() {
+      self.is_grounded = false;
+      self.velocity = self.action_state.get_jump_velocity();
+      self.action_state = ActionState::AIRBORNE;
+    }
   }
 
-  pub fn tick(&mut self) {
-    self.airdash_time = countdown(self.airdash_time);
+  pub fn execute_airdash(&mut self) {
+    if self.action_state.is_finished_airdashing() {
+      self.action_state = ActionState::AIRBORNE;
+    }
+  }
+
+  pub fn execute_backdash(&mut self) {
+    match self.backdash {
+      Backdash::STANDARD {speed, busy, motion_duration} => {
+        let int_force = InterpolatedForce::new(
+          Vec2::new(-speed * self.facing_vector, 0.0),
+          Vec2::new(-2.0 * self.facing_vector, 0.0),
+          motion_duration
+        );
+        self.set_i_force(int_force);
+        self.set_busy(busy);
+      },
+      _ => ()
+    }
   }
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum Backdash {
+  STANDARD {speed: f32, busy: u8, motion_duration: u8},
+  TELEPORT { distance: f32, busy: u8, motion_duration: u8},
+  LEAP {busy: u8, motion_duration: u8}
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct CharacterMovementEvent{
@@ -340,6 +374,42 @@ pub enum MovementEventType {
   AIRBACKDASH,
 }
 
+
+
+impl Default for CharacterStatus {
+  fn default() -> Self {
+    CharacterStatus {
+      action_state: ActionState::default(),
+      previous_action_state: ActionState::default(),
+      facing_vector: 1.0,
+      movement_event: None,
+      busy: 0,
+      jumpsquat: 3,
+      is_grounded: true,
+      air_jumps: 1,
+      air_jumps_remaining: 1,
+      airdashes: 1,
+      airdashes_remaining: 1,
+      airdash_lockout: 0,
+      air_dash_speed: 8.0,
+      air_back_dash_speed: 6.0,
+      velocity: Vec2::ZERO,
+      walk_speed: 4.0,
+      back_walk_speed: 2.5,
+      dash_speed: 8.0,
+      gravity: 1.0,
+      jump_height: 20.0,
+      max_airdash_time: 25,
+      max_air_backdash_time: 15,
+      int_force: None,
+      backdash: Backdash::STANDARD{
+        speed: 25.0,
+        busy: 20,
+        motion_duration: 20
+      }
+    }
+  }
+}
 pub trait SpawnPlayer {
   fn spawn_player(
     &mut self, 
@@ -380,51 +450,10 @@ impl SpawnPlayer for Commands<'_, '_> {
         ..Default::default()
       })
       .insert(player_id)
-      .insert(CharacterStatus::default())
-      .insert( CharacterBody {
+      .insert(CharacterStatus {
         facing_vector,
         ..Default::default()
       })
       .insert(AnimationController::new(character_prefix, library));
-  }
-}
-
-impl Default for CharacterStatus {
-  fn default() -> Self {
-    CharacterStatus {
-      action_state: ActionState::default(),
-      previous_action_state: ActionState::default(),
-      movement_event: None,
-      busy: 0,
-      jumpsquat: 3,
-      is_grounded: true,
-      air_jumps: 1,
-      air_jumps_remaining: 1,
-      airdashes: 1,
-      airdashes_remaining: 1,
-      airdash_lockout: 0
-    }
-  }
-}
-
-impl Default for CharacterBody {
-  fn default() -> Self {
-    CharacterBody {
-      velocity: Vec2::ZERO,
-      facing_vector: 1.0,
-      walk_speed: 4.0,
-      back_walk_speed: 2.5,
-      dash_speed: 8.0,
-      air_dash_speed: 8.0,
-      air_back_dash_speed: 6.0,
-      gravity: 1.0,
-      jump_height: 20.0,
-      max_airdash_time: 25,
-      max_air_backdash_time: 15,
-      airdash_time: 0,
-      int_force: None,
-      backdash: Box::new(BasicBackdash::new(25.0,20,20)),
-      jumpdata: None,
-    }
   }
 }

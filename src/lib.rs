@@ -6,7 +6,6 @@ mod inputs;
 mod attacks;
 mod movement;
 mod constants;
-mod display;
 mod utils;
 mod animation;
 mod collision;
@@ -52,7 +51,6 @@ pub mod prelude {
   pub use crate::inputs::*;
   pub use crate::movement::*;
   pub use crate::constants::*;
-  pub use crate::display::*;
   pub use crate::utils::*;
   pub use crate::animation::*;
   pub use crate::collision::*;
