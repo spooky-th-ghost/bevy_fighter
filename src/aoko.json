@@ -195,6 +195,20 @@
       "length": 1,
       "loopable": false,
       "hold": 2
+    },
+    {
+      "name": "5A",
+      "first_frame": 23,
+      "length": 6,
+      "loopable": false,
+      "hold": 1
+    },
+    {
+      "name": "5B",
+      "first_frame": 29,
+      "length": 10,
+      "loopable": false,
+      "hold": 1
     }
   ]
 }

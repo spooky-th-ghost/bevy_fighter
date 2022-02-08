@@ -128,7 +128,6 @@ pub enum HitState {
   STANDING,
   FLOATING,
   TUMBLING,
-
 }
 
 #[derive(PartialEq, Clone, Copy)]
