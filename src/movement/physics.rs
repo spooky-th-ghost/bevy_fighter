@@ -75,8 +75,8 @@ pub enum ActionState {
   JUGGLE,
   STANDING,
   BACKDASHING,
-  AIR_DASHING,
-  AIR_BACKDASHING 
+  AIR_DASHING {velocity: Vec2},
+  AIR_BACKDASHING {velocity: Vec2} 
 }
 
 impl Default for ActionState {

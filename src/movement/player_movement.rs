@@ -1,6 +1,6 @@
 pub use crate::prelude::*;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
   pub struct JumpData {
   pub superjump: bool,
   pub x_velocity: f32,
