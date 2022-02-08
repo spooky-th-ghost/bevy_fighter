@@ -186,14 +186,10 @@ impl CharacterStatus {
         if let Some(ct) = buffer.command_type {
           match ct {
             CommandType::DASH => {
-              // self.action_state = ActionState::AIR_DASHING {velocity: Vec2::X * self.air_dash_speed * self.facing_vector};
-              // self.movement_event = Some(MovementEvent::new(MovementEventType::AIRDASH,buffer.current_motion));
               self.buffer_airdash(true);
               buffer.consume_motion();
             },
             CommandType::BACK_DASH =>  {
-              // self.action_state = ActionState::AIR_BACKDASHING {velocity: Vec2::X * self.air_dash_speed * -self.facing_vector };
-              // self.movement_event = Some(MovementEvent::new(MovementEventType::AIRBACKDASH,buffer.current_motion));
               self.buffer_airdash(false);
               buffer.consume_motion();
             },
