@@ -8,9 +8,9 @@ impl Plugin for FighterPlugin {
       .add_event::<CharacterMovementEvent>()
       .add_event::<AnimationTransitionEvent>()
       .add_plugin(FrameTimeDiagnosticsPlugin)
-      .insert_resource(AnimationLibrary::new())
+      .insert_resource(CharacterLibrary::new())
       .insert_resource(PlayerData::default())
-      .insert_resource(CollisionBoxColors::new(0.4))
+      //.insert_resource(CollisionBoxColors::new(0.4))
       .add_stage("main",SystemStage::single_threaded()
         .with_run_criteria(FixedTimestep::step(0.01667))
         .with_system(

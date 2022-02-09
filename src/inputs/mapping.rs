@@ -116,6 +116,17 @@ impl PlayerData {
     };
     self.positions[i].set_position(position);
   }
+
+  pub fn get_distance(&self) -> f32 {
+    return self.positions[0].get_position().distance(self.positions[1].get_position());
+  }
+
+  pub fn get_mid_point(&self) -> Vec2 {
+    let p1 = self.positions[0].get_position();
+    let p2 = self.positions[1].get_position();
+
+    return Vec2::new(p1.x+p2.x/2.0, p1.y+p2.y/2.0);
+  }
 }
 pub struct FighterInputMapper {
   pub player_id: PlayerId,

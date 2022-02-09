@@ -59,7 +59,7 @@ impl CharacterStatus {
   pub fn land(&mut self) {
     self.is_grounded = true;
     self.air_jumps_remaining = self.air_jumps;
-    self.action_state = ActionState::STANDING;
+    self.action_state = ActionState::Standing;
     self.airdashes_remaining = self.airdashes;
     self.airdash_lockout = 0;
   }
@@ -90,11 +90,11 @@ impl CharacterStatus {
 
   pub fn can_turn(&self) -> bool {
     match self.action_state {
-      ActionState::STANDING
-      | ActionState::AIRBORNE
-      | ActionState::WALKING
-      | ActionState::BACKWALKING
-      | ActionState::CROUCHING => return true,
+      ActionState::Standing
+      | ActionState::Airborne
+      | ActionState::Walking
+      | ActionState::BackWalking
+      | ActionState::Crouching => return true,
       _ => return false,
     }
   }
@@ -102,29 +102,29 @@ impl CharacterStatus {
   pub fn calculate_transition(&self) -> Option<AnimationTransition> {
 
     match self.action_state {
-      ActionState::JUMPSQUAT {squat: _, velocity: _} => return Some(AnimationTransition::ToRise),
-      ActionState::WALKING => return Some(AnimationTransition::ToWalk),
-      ActionState::BACKWALKING => return Some(AnimationTransition::ToBackwalk),
-      ActionState::CROUCHING => return Some(AnimationTransition::ToCrouch),
-      ActionState::DASHING => return Some(AnimationTransition::ToDash),
-      ActionState::BACKDASHING => return Some(AnimationTransition::ToBackdash),
-      ActionState::AIR_DASHING {duration: _, velocity: _} => return Some(AnimationTransition::ToAirdash),
-      ActionState::AIR_BACKDASHING {duration: _, velocity: _} => return Some(AnimationTransition::ToAirBackdash),
-      ActionState::AIRBORNE => {
+      ActionState::Jumpsquat {squat: _, velocity: _} => return Some(AnimationTransition::ToRise),
+      ActionState::Walking => return Some(AnimationTransition::ToWalk),
+      ActionState::BackWalking => return Some(AnimationTransition::ToBackwalk),
+      ActionState::Crouching => return Some(AnimationTransition::ToCrouch),
+      ActionState::Dashing => return Some(AnimationTransition::ToDash),
+      ActionState::BackDashing => return Some(AnimationTransition::ToBackdash),
+      ActionState::AirDashing {duration: _, velocity: _} => return Some(AnimationTransition::ToAirdash),
+      ActionState::AirBackDashing {duration: _, velocity: _} => return Some(AnimationTransition::ToAirBackdash),
+      ActionState::Airborne => {
         match self.previous_action_state { 
-          ActionState::AIR_DASHING {duration:_, velocity: _} => return Some(AnimationTransition::AirdashToFall),
-          ActionState::AIR_BACKDASHING {duration:_, velocity: _} => return Some(AnimationTransition::AirbackdashToFall),
+          ActionState::AirDashing {duration:_, velocity: _} => return Some(AnimationTransition::AirdashToFall),
+          ActionState::AirBackDashing {duration:_, velocity: _} => return Some(AnimationTransition::AirbackdashToFall),
           _ => return None,
         }
       }, // need to do the Rise_Fall_Split
-      ActionState::STANDING => {
+      ActionState::Standing => {
         match self.previous_action_state {
-          ActionState::DASHING => return Some(AnimationTransition::DashToIdle),
-          ActionState::BACKDASHING =>  return Some(AnimationTransition::BackDashToIdle),
-          ActionState::WALKING => return Some(AnimationTransition::WalkToIdle),
-          ActionState::BACKWALKING => return Some(AnimationTransition::BackwalkToIdle),
-          ActionState::CROUCHING => return Some(AnimationTransition::CrouchToIdle),
-          ActionState::AIRBORNE => return Some(AnimationTransition::FallToIdle),
+          ActionState::Dashing => return Some(AnimationTransition::DashToIdle),
+          ActionState::BackDashing =>  return Some(AnimationTransition::BackDashToIdle),
+          ActionState::Walking => return Some(AnimationTransition::WalkToIdle),
+          ActionState::BackWalking => return Some(AnimationTransition::BackwalkToIdle),
+          ActionState::Crouching => return Some(AnimationTransition::CrouchToIdle),
+          ActionState::Airborne => return Some(AnimationTransition::FallToIdle),
           _ => return None
         }
       },
@@ -147,19 +147,19 @@ impl CharacterStatus {
     if !self.get_is_busy() {
       if self.get_is_grounded() {
         match buffer.current_motion {
-          5 => self.action_state = ActionState::STANDING,
+          5 => self.action_state = ActionState::Standing,
           6 => {
-            if self.action_state != ActionState::DASHING {
-              self.action_state = ActionState::WALKING;
+            if self.action_state != ActionState::Dashing {
+              self.action_state = ActionState::Walking;
             }
           },
-          4 => self.action_state = ActionState::BACKWALKING,
-          1 | 2 | 3 => self.action_state = ActionState::CROUCHING,
+          4 => self.action_state = ActionState::BackWalking,
+          1 | 2 | 3 => self.action_state = ActionState::Crouching,
           7 | 8 => {
             self.buffer_jump(buffer.current_motion, false,false, false);
           },
           9 => {
-            if self.action_state == ActionState::DASHING {
+            if self.action_state == ActionState::Dashing {
               self.buffer_jump(buffer.current_motion, false,true, false);
             } else {
               self.buffer_jump(buffer.current_motion, false,false, false);
@@ -170,11 +170,11 @@ impl CharacterStatus {
         if let Some(ct) = buffer.command_type {
           match ct {
             CommandType::DASH => {
-              self.action_state = ActionState::DASHING;
+              self.action_state = ActionState::Dashing;
               buffer.consume_motion();
             },
             CommandType::BACK_DASH => {
-              self.action_state = ActionState::BACKDASHING;
+              self.action_state = ActionState::BackDashing;
               self.movement_event = Some(MovementEvent::new(MovementEventType::BACKDASH, buffer.current_motion));
               buffer.consume_motion();
             },
@@ -262,9 +262,9 @@ impl CharacterStatus {
       }
     };
     self.action_state = if airborne {
-      ActionState::AIR_JUMPSQUAT { squat, velocity}
+      ActionState::AirJumpsquat { squat, velocity}
     } else {
-      ActionState::JUMPSQUAT {squat, velocity}
+      ActionState::Jumpsquat {squat, velocity}
     };
   }
 
@@ -275,9 +275,9 @@ impl CharacterStatus {
       self.airdash_lockout = 15;
 
       if forward {
-        self.action_state = ActionState::AIR_DASHING {duration: self.max_airdash_time, velocity: Vec2::X * self.air_dash_speed * self.facing_vector};
+        self.action_state = ActionState::AirDashing {duration: self.max_airdash_time, velocity: Vec2::X * self.air_dash_speed * self.facing_vector};
       } else {
-        self.action_state = ActionState::AIR_BACKDASHING {duration: self.max_air_backdash_time, velocity: Vec2::X * self.air_dash_speed * -self.facing_vector };
+        self.action_state = ActionState::AirBackDashing {duration: self.max_air_backdash_time, velocity: Vec2::X * self.air_dash_speed * -self.facing_vector };
       }
     }
   }
@@ -286,13 +286,13 @@ impl CharacterStatus {
     if self.action_state.is_finished_jumping() {
       self.is_grounded = false;
       self.velocity = self.action_state.get_jump_velocity();
-      self.action_state = ActionState::AIRBORNE;
+      self.action_state = ActionState::Airborne;
     }
   }
 
   pub fn execute_airdash(&mut self) {
     if self.action_state.is_finished_airdashing() {
-      self.action_state = ActionState::AIRBORNE;
+      self.action_state = ActionState::Airborne;
     }
   }
 
@@ -415,7 +415,7 @@ pub trait SpawnPlayer {
     &mut self, 
     player_id: PlayerId, 
     character_prefix: &str, 
-    library: &AnimationLibrary,
+    library: &CharacterLibrary,
     texture_atlas: Handle<TextureAtlas>
   );
 }
@@ -425,7 +425,7 @@ impl SpawnPlayer for Commands<'_, '_> {
     &mut self, 
     player_id: PlayerId, 
     character_prefix: &str, 
-    library: &AnimationLibrary,
+    library: &CharacterLibrary,
     texture_atlas: Handle<TextureAtlas>) {
     let (transform, facing_vector, flip_x) = match player_id {
       PlayerId::P1 => (

@@ -1,12 +1,14 @@
 pub use crate::prelude::*;
 
 #[derive(Deserialize, Serialize)]
-pub struct SpriteSheetJson {
-  pub animations: Vec<RawJsonAnimation>
+pub struct CharacterSheetSerialized {
+  pub animations: Vec<AnimationSerialized>,
+  pub hitboxes: Vec<HitboxSerialized>,
+  pub attacks: Vec<AttackSerialized>
 }
 
 #[derive(Deserialize, Serialize)]
-pub struct RawJsonAnimation {
+pub struct AnimationSerialized {
   pub name: String,
   pub first_frame: usize,
   pub length: usize,
@@ -15,47 +17,99 @@ pub struct RawJsonAnimation {
 }
 
 #[derive(Debug, Clone)]
-pub struct AnimationLibrary {
-  animations: HashMap<String, Animation>
+pub struct CharacterLibrary {
+  animations: HashMap<String, Animation>,
+  hitboxes: HashMap<String, Hitbox>,
+  pub attacks: HashMap<String, Attack>,
 }
 
-impl AnimationLibrary {
+impl CharacterLibrary {
   pub fn new() -> Self {
     let animations: HashMap<String, Animation> = HashMap::new();
-    AnimationLibrary {
-      animations
+    let hitboxes: HashMap<String, Hitbox> = HashMap::new();
+    let attacks: HashMap<String, Attack> = HashMap::new();
+    CharacterLibrary {
+      animations,
+      hitboxes,
+      attacks
     }
   }
 
-  pub fn load_character_sprite_data(&mut self, character_name: &str, raw_path: &str) {
-  let path = Path::new(raw_path);
+  pub fn load_character_data(&mut self, character_name: &str) {
+  let raw_path = format!("./assets/character_data/{}.json", character_name);
+  let path = Path::new(&raw_path[..]);
   if let Ok(raw_string) = read_to_string(path) {
     let raw_slice = &raw_string[..]; 
-    let json_sheet: SpriteSheetJson = from_str(raw_slice).unwrap();
+    let character_sheet: CharacterSheetSerialized = from_str(raw_slice).unwrap();
 
+    let mut raw_hitboxes: Vec<(String, Hitbox)> = Vec::new();
     let mut raw_anims: Vec<(String, Animation)> = Vec::new();
-    for animation in json_sheet.animations {
+    for animation in character_sheet.animations {
       raw_anims.push(
         (
           format!("{}_{}",character_name,animation.name.clone()),
-          Animation::new(animation.first_frame, animation.length, animation.loopable, animation.first_frame + animation.length - 1, animation.hold)
+          Animation::from_serialized(animation),
         )
       );
     }
 
-    self.add(
+    for hitbox in character_sheet.hitboxes {
+      raw_hitboxes.push(
+        (
+          format!("{}_{}",character_name,hitbox.name.clone()),
+          Hitbox::from_serialized(hitbox),
+        )
+      );
+    }
+
+    self.add_animations(
       HashMap::from_iter::<HashMap<String, Animation>>(raw_anims.iter().cloned().collect())
+    );
+
+    self.add_hitboxes(
+       HashMap::from_iter::<HashMap<String, Hitbox>>(raw_hitboxes.iter().cloned().collect())
+    );
+
+    let mut raw_attacks: Vec<(String, Attack)> = Vec::new();
+
+    for attack in character_sheet.attacks {
+      raw_attacks.push(
+        (
+          format!("{}_{}",character_name,attack.name.clone()),
+          Attack::from_serialized(attack,&self,character_name)
+        )
+      )
+    }
+
+    self.add_attacks(
+      HashMap::from_iter::<HashMap<String, Attack>>(raw_attacks.iter().cloned().collect())
     );
   }
 }
 
-  pub fn add(&mut self, animations: HashMap<String, Animation>) {
+  pub fn add_animations(&mut self, animations: HashMap<String, Animation>) {
     self.animations.extend(animations);
   }
 
-  pub fn get(&self, anim_id: String) -> Option<Animation>{
+  pub fn add_hitboxes(&mut self, hitboxes: HashMap<String, Hitbox>) {
+    self.hitboxes.extend(hitboxes);
+  }
+
+  pub fn add_attacks(&mut self, attacks: HashMap<String, Attack>) {
+    self.attacks.extend(attacks)
+  }
+
+  pub fn get_animation(&self, anim_id: String) -> Option<Animation> {
     if let Some(animation) = self.animations.get(&anim_id) {
       return Some(animation.clone());
+    } else {
+      return None;
+    }
+  }
+
+  pub fn get_hitbox(&self, hitbox_id: String) -> Option<Hitbox> {
+    if let Some(hitbox) = self.hitboxes.get(&hitbox_id) {
+      return Some(hitbox.clone());
     } else {
       return None;
     }
@@ -72,13 +126,15 @@ pub struct Animation {
 }
 
 impl Animation {
-  pub fn new(first_frame: usize, length: usize, loopable: bool, final_frame: usize, hold: u8) -> Self {
+  pub fn from_serialized(s: AnimationSerialized) -> Self {
+     let final_frame: usize = s.first_frame + s.length - 1;
+    
     Animation {
-      first_frame,
-      length,
-      loopable,
+      first_frame: s.first_frame,
+      length: s.length,
+      loopable: s.loopable,
       final_frame,
-      hold
+      hold: s.hold
     }
   }
 }
@@ -136,7 +192,7 @@ pub struct AnimationController {
 }
 
 impl AnimationController {
-  pub fn new(character_prefix: &str, library: &AnimationLibrary) -> Self {
+  pub fn new(character_prefix: &str, library: &CharacterLibrary) -> Self {
     let mut animations = HashMap::new();
     let my_regex = Regex::new(&format!("(^{}.+)", character_prefix)[..]).unwrap();
     for (anim_id, animation) in library.animations.iter() {
@@ -148,7 +204,7 @@ impl AnimationController {
     AnimationController {
       character_prefix: character_prefix.to_string(),
       animation_state: AnimationState::LOOPING,
-      core_animation: library.get(format!("{}_idle", character_prefix.to_string())).unwrap(),
+      core_animation: library.get_animation(format!("{}_idle", character_prefix.to_string())).unwrap(),
       smear_animation: None,
       current_index: 0,
       current_hold: 2,

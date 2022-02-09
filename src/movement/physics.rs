@@ -63,41 +63,41 @@ impl InterpolatedForce {
 /// States representing all possible player actions
 #[derive(Clone,Copy, Debug)]
 pub enum ActionState {
-  DASHING,
-  WALKING,
-  BACKWALKING,
-  ATTACKING,
-  BLOCKING,
-  CROUCHBLOCKING,
-  CROUCHING,
-  JUMPSQUAT {squat: u8, velocity: Vec2 },
-  AIR_JUMPSQUAT {squat: u8, velocity: Vec2 },
-  AIRBORNE,
-  JUGGLE,
-  STANDING,
-  BACKDASHING,
-  AIR_DASHING {duration: u8, velocity: Vec2},
-  AIR_BACKDASHING {duration: u8, velocity: Vec2} 
+  Dashing,
+  Walking,
+  BackWalking,
+  Attacking,
+  Blocking,
+  CrouchBlocking,
+  Crouching,
+  Jumpsquat {squat: u8, velocity: Vec2 },
+  AirJumpsquat {squat: u8, velocity: Vec2 },
+  Airborne,
+  Juggle,
+  Standing,
+  BackDashing,
+  AirDashing {duration: u8, velocity: Vec2},
+  AirBackDashing {duration: u8, velocity: Vec2} 
 }
 
 impl PartialEq for ActionState {
   fn eq(&self, other: &Self) -> bool {
     match (self, other) {
-      (ActionState::DASHING, ActionState::DASHING) => true,
-      (ActionState::WALKING, ActionState::WALKING) => true,
-      (ActionState::BACKWALKING, ActionState::BACKWALKING) => true,
-      (ActionState::ATTACKING, ActionState::ATTACKING) => true,
-      (ActionState::BLOCKING, ActionState::BLOCKING) => true,
-      (ActionState::CROUCHBLOCKING, ActionState::CROUCHBLOCKING) => true,
-      (ActionState::CROUCHING, ActionState::CROUCHING) => true,
-      (ActionState::AIRBORNE, ActionState::AIRBORNE) => true,
-      (ActionState::JUGGLE, ActionState::JUGGLE) => true,
-      (ActionState::STANDING, ActionState::STANDING) => true,
-      (ActionState::BACKDASHING, ActionState::BACKDASHING) => true,
-      (ActionState::JUMPSQUAT {squat:_, velocity:_},ActionState::JUMPSQUAT {squat: _, velocity:_ }) => true,
-      (ActionState::AIR_JUMPSQUAT {squat:_, velocity:_}, ActionState::AIR_JUMPSQUAT {squat:_, velocity:_}) => true,
-      (ActionState::AIR_DASHING {duration:_, velocity:_},ActionState::AIR_DASHING {duration:_, velocity:_},) => true,
-      (ActionState::AIR_BACKDASHING {duration:_, velocity:_}, ActionState::AIR_BACKDASHING {duration:_, velocity:_}) => true,
+      (ActionState::Dashing, ActionState::Dashing) => true,
+      (ActionState::Walking, ActionState::Walking) => true,
+      (ActionState::BackWalking, ActionState::BackWalking) => true,
+      (ActionState::Attacking, ActionState::Attacking) => true,
+      (ActionState::Blocking, ActionState::Blocking) => true,
+      (ActionState::CrouchBlocking, ActionState::CrouchBlocking) => true,
+      (ActionState::Crouching, ActionState::Crouching) => true,
+      (ActionState::Airborne, ActionState::Airborne) => true,
+      (ActionState::Juggle, ActionState::Juggle) => true,
+      (ActionState::Standing, ActionState::Standing) => true,
+      (ActionState::BackDashing, ActionState::BackDashing) => true,
+      (ActionState::Jumpsquat {squat:_, velocity:_},ActionState::Jumpsquat {squat: _, velocity:_ }) => true,
+      (ActionState::AirJumpsquat {squat:_, velocity:_}, ActionState::AirJumpsquat {squat:_, velocity:_}) => true,
+      (ActionState::AirDashing {duration:_, velocity:_},ActionState::AirDashing {duration:_, velocity:_},) => true,
+      (ActionState::AirBackDashing {duration:_, velocity:_}, ActionState::AirBackDashing {duration:_, velocity:_}) => true,
       _ => false,
     }
   }
@@ -106,16 +106,16 @@ impl PartialEq for ActionState {
 impl ActionState {
   pub fn tick(&mut self) {
     match self {
-      ActionState::JUMPSQUAT { squat, velocity: _} => {
+      ActionState::Jumpsquat { squat, velocity: _} => {
         *squat = countdown(*squat);
       },
-      ActionState::AIR_JUMPSQUAT { squat, velocity: _} => {
+      ActionState::AirJumpsquat { squat, velocity: _} => {
         *squat = countdown(*squat);
       },
-      ActionState::AIR_DASHING {duration, velocity: _} => {
+      ActionState::AirDashing {duration, velocity: _} => {
         *duration = countdown(*duration);
       },
-      ActionState::AIR_BACKDASHING {duration, velocity: _} => {
+      ActionState::AirBackDashing {duration, velocity: _} => {
         *duration = countdown(*duration);
       },
       _ => ()
@@ -124,14 +124,14 @@ impl ActionState {
 
   pub fn is_finished_jumping(&self) -> bool {
     match self {
-      ActionState::JUMPSQUAT{squat, velocity: _} => {
+      ActionState::Jumpsquat{squat, velocity: _} => {
         if *squat == 0 {
           return true;
         } else {
           return false;
         }
       },
-      ActionState::AIR_JUMPSQUAT{squat, velocity: _} => {
+      ActionState::AirJumpsquat{squat, velocity: _} => {
         if *squat == 0 {
           return true;
         } else {
@@ -144,14 +144,14 @@ impl ActionState {
 
   pub fn is_finished_airdashing(&self) -> bool {
     match self {
-      ActionState::AIR_DASHING {duration, velocity: _} => {
+      ActionState::AirDashing {duration, velocity: _} => {
         if *duration == 0 {
           return true;
         } else {
           return false;
         }
       },
-      ActionState::AIR_BACKDASHING {duration, velocity: _} => {
+      ActionState::AirBackDashing {duration, velocity: _} => {
         if *duration == 0 {
           return true;
         } else {
@@ -164,15 +164,15 @@ impl ActionState {
 
   pub fn get_jump_velocity(&self) -> Vec2{
     match self {
-      ActionState::AIR_JUMPSQUAT {squat: _, velocity} => *velocity,
-      ActionState::JUMPSQUAT {squat: _, velocity} => *velocity,
+      ActionState::AirJumpsquat {squat: _, velocity} => *velocity,
+      ActionState::Jumpsquat {squat: _, velocity} => *velocity,
       _ => Vec2::ZERO,
     }
   }
 }
 
 impl Default for ActionState {
-  fn default() -> Self {Self::STANDING}
+  fn default() -> Self {Self::Standing}
 }
 
 

@@ -35,7 +35,9 @@ pub fn update_debug_ui(
     QueryState<&CharacterStatus>
   )>,
   diagnostics: Res<Diagnostics>,
+  player_data: Res<PlayerData>
 ) {
+  let distance = player_data.get_distance();
   let mut player_text: Vec<Vec<String>> = Vec::new();
   let mut fps = 0.0;
   if let Some(fps_diagnostic) = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS) {
@@ -53,7 +55,8 @@ pub fn update_debug_ui(
     my_strings.push(format!("Airdash Lockout: {:?} \n", status.airdash_lockout));
     my_strings.push(format!("Velocity: {:?} \n", status.velocity));
     my_strings.push(format!("Facing Vector: {:?} \n", status.facing_vector));
-    my_strings.push(format!("FPS: {:.1}", fps));
+    my_strings.push(format!("FPS: {:.1} \n", fps));
+    my_strings.push(format!("Distance: {:?}", distance));
     let strings_to_push = my_strings.clone();
     player_text.push(strings_to_push);
   }
@@ -71,6 +74,7 @@ pub fn update_debug_ui(
       text.sections[5].value = player_text[index][5].clone();
       text.sections[6].value = player_text[index][6].clone();
       text.sections[7].value = player_text[index][7].clone();
+      text.sections[8].value = player_text[index][8].clone();
   }
 }
 
@@ -95,13 +99,13 @@ pub fn determine_player_velocity_and_state (
 
         status.execute_airdash();
         let new_velocity = match status.get_action_state() {
-          ActionState::WALKING => Vec2::new(status.walk_speed * status.facing_vector, 0.0),
-          ActionState::BACKWALKING => Vec2::new(-status.back_walk_speed * status.facing_vector, 0.0),
-          ActionState::DASHING => Vec2::new(status.dash_speed * status.facing_vector,0.0),
-          ActionState::AIRBORNE => status.velocity - (Vec2::Y * status.gravity),
-          ActionState::AIR_DASHING {duration: _, velocity} => velocity,
-          ActionState::AIR_BACKDASHING {duration: _, velocity} => velocity,
-          ActionState::STANDING => Vec2::ZERO,
+          ActionState::Walking => Vec2::new(status.walk_speed * status.facing_vector, 0.0),
+          ActionState::BackWalking => Vec2::new(-status.back_walk_speed * status.facing_vector, 0.0),
+          ActionState::Dashing => Vec2::new(status.dash_speed * status.facing_vector,0.0),
+          ActionState::Airborne => status.velocity - (Vec2::Y * status.gravity),
+          ActionState::AirDashing {duration: _, velocity} => velocity,
+          ActionState::AirBackDashing {duration: _, velocity} => velocity,
+          ActionState::Standing => Vec2::ZERO,
           _ => status.velocity.custom_lerp(Vec2::ZERO, 0.5),
         };
         status.set_velocity(new_velocity);

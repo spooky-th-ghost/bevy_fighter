@@ -13,6 +13,7 @@ mod fighter_plugin;
 mod player_systems;
 mod player_data;
 mod debug_ui;
+mod camera;
 
 pub mod prelude {
   // external crates
@@ -40,6 +41,7 @@ pub mod prelude {
     prelude::*
   };
   pub use std::{
+    f32::*,
     fmt::Write,
     path::Path,
     fs::read_to_string,
@@ -59,4 +61,5 @@ pub mod prelude {
   pub use crate::player_data::*;
   pub use crate::debug_ui::*;
   pub use crate::attacks::*;
+  pub use crate::camera::*;
   }
