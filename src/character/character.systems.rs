@@ -2,15 +2,15 @@ use crate::prelude::*;
 
 pub fn execute_player_physics (
   mut player_data: ResMut<PlayerData>, 
-  mut query: Query<(&PlayerId, &mut CharacterStatus, &mut Transform, &mut TextureAtlasSprite)>,
+  mut query: Query<(&PlayerId, &mut CharacterMovement, &mut Transform, &mut TextureAtlasSprite)>,
   mut transition_writer: EventWriter<AnimationTransitionEvent>,
 ) {
-  for (player_id, mut status, mut transform, mut sprite) in query.iter_mut() {
-    let tv = status.get_target_velo();
+  for (player_id, mut movement, mut transform, mut sprite) in query.iter_mut() {
+    let tv = movement.get_target_velo();
     transform.translation += Vec3::new(tv.x, tv.y, 0.0);
     if transform.translation.y < 0.0 {
       transform.translation.y = 0.0;
-      status.land();
+      movement.land();
       transition_writer.send(
         AnimationTransitionEvent {
           player_id: *player_id,
@@ -21,9 +21,9 @@ pub fn execute_player_physics (
 
     player_data.set_position(player_id, transform.translation);
     let facing_vector = player_data.get_facing_vector(player_id);
-    if status.can_turn() {
+    if movement.can_turn() {
       sprite.flip_x = facing_vector < 0.0; 
-      status.set_facing_vector(facing_vector);
+      movement.set_facing_vector(facing_vector);
     }
   }
 }
@@ -32,7 +32,7 @@ pub fn execute_player_physics (
 pub fn update_debug_ui(
   mut q: QuerySet<(
     QueryState<(&mut Text, &PlayerId)>,
-    QueryState<&CharacterStatus>
+    QueryState<&CharacterMovement>
   )>,
   diagnostics: Res<Diagnostics>,
   player_data: Res<PlayerData>
@@ -46,15 +46,15 @@ pub fn update_debug_ui(
       }
   }
 
-  for status in q.q1().iter() {
+  for movement in q.q1().iter() {
     let mut my_strings: Vec<String> = Vec::new();
-    my_strings.push(format!("Action State: {:?} \n", status.action_state));
-    my_strings.push(format!("Busy: {:?} \n", status.busy));
-    my_strings.push(format!("Is Grounded: {:?} \n", status.is_grounded));
-    my_strings.push(format!("Airdashes: {:?} \n", status.airdashes_remaining));
-    my_strings.push(format!("Airdash Lockout: {:?} \n", status.airdash_lockout));
-    my_strings.push(format!("Velocity: {:?} \n", status.velocity));
-    my_strings.push(format!("Facing Vector: {:?} \n", status.facing_vector));
+    my_strings.push(format!("Action State: {:?} \n", movement.action_state));
+    my_strings.push(format!("Busy: {:?} \n", movement.busy));
+    my_strings.push(format!("Is Grounded: {:?} \n", movement.is_grounded));
+    my_strings.push(format!("Airdashes: {:?} \n", movement.airdashes_remaining));
+    my_strings.push(format!("Airdash Lockout: {:?} \n", movement.airdash_lockout));
+    my_strings.push(format!("Velocity: {:?} \n", movement.velocity));
+    my_strings.push(format!("Facing Vector: {:?} \n", movement.facing_vector));
     my_strings.push(format!("FPS: {:.1} \n", fps));
     my_strings.push(format!("Distance: {:?}", distance));
     let strings_to_push = my_strings.clone();
@@ -80,40 +80,40 @@ pub fn update_debug_ui(
 
 pub fn determine_player_velocity_and_state (
   mut player_data: ResMut<PlayerData>, 
-  mut query: Query<(&PlayerId, &mut CharacterStatus)>,
+  mut query: Query<(&PlayerId, &mut CharacterMovement)>,
   mut transition_writer: EventWriter<AnimationTransitionEvent>,
 ) {
-  for (player_id, mut status) in query.iter_mut() {
-    status.tick();
+  for (player_id, mut movement) in query.iter_mut() {
+    movement.tick();
     for buffer in player_data.buffers.iter_mut() {
       if buffer.player_id == *player_id {
-        status.update_action_state(buffer);
+        movement.update_action_state(buffer);
         // Consume Movement Events
-        if let Some(me) = status.movement_event {
+        if let Some(me) = movement.movement_event {
           match me.event_type {
-            MovementEventType::BACKDASH => status.execute_backdash(),
+            MovementEventType::BACKDASH => movement.execute_backdash(),
             _ => ()
           }
-          status.clear_movement_event();
+          movement.clear_movement_event();
         }
 
-        status.execute_airdash();
-        let new_velocity = match status.get_action_state() {
-          ActionState::Walking => Vec2::new(status.walk_speed * status.facing_vector, 0.0),
-          ActionState::BackWalking => Vec2::new(-status.back_walk_speed * status.facing_vector, 0.0),
-          ActionState::Dashing => Vec2::new(status.dash_speed * status.facing_vector,0.0),
-          ActionState::Airborne => status.velocity - (Vec2::Y * status.gravity),
+        movement.execute_airdash();
+        let new_velocity = match movement.get_action_state() {
+          ActionState::Walking => Vec2::new(movement.walk_speed * movement.facing_vector, 0.0),
+          ActionState::BackWalking => Vec2::new(-movement.back_walk_speed * movement.facing_vector, 0.0),
+          ActionState::Dashing => Vec2::new(movement.dash_speed * movement.facing_vector,0.0),
+          ActionState::Airborne => movement.velocity - (Vec2::Y * movement.gravity),
           ActionState::AirDashing {duration: _, velocity} => velocity,
           ActionState::AirBackDashing {duration: _, velocity} => velocity,
           ActionState::Standing => Vec2::ZERO,
-          _ => status.velocity.custom_lerp(Vec2::ZERO, 0.5),
+          _ => movement.velocity.custom_lerp(Vec2::ZERO, 0.5),
         };
-        status.set_velocity(new_velocity);
-        status.execute_jump();
+        movement.set_velocity(new_velocity);
+        movement.execute_jump();
       }
     }
-    if status.get_should_transition() {
-      if let Some(transition) =  status.calculate_transition() {
+    if movement.get_should_transition() {
+      if let Some(transition) =  movement.calculate_transition() {
         transition_writer.send(
     AnimationTransitionEvent {
             player_id: *player_id,

@@ -1,4 +1,25 @@
 {
+  "movement": {
+    "jumpsquat": 3,
+    "air_jumps": 1,
+    "airdashes": 1,
+    "air_dash_speed": 8.0,
+    "air_back_dash_speed": 6.0,
+    "walk_speed": 4.0,
+    "back_walk_speed": 2.5,
+    "dash_speed": 8.0,
+    "gravity": 1.0,
+    "jump_height": 20.0,
+    "max_airdash_time": 25,
+    "max_air_backdash_time": 15,
+    "backdash": {
+      "Standard": {
+        "speed": 25.0,
+        "busy": 20,
+        "motion_duration": 20
+      }
+    }
+  },
   "animations": [
     {
       "name": "idle",

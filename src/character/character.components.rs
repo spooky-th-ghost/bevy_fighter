@@ -6,8 +6,25 @@ pub enum PlayerId {
   P2
 }
 
+#[derive(Serialize,Deserialize)]
+pub struct CharacterMovementSerialized {
+  pub jumpsquat: u8,
+  pub air_jumps: u8,
+  pub airdashes: u8,
+  pub air_dash_speed: f32,
+  pub air_back_dash_speed: f32,
+  pub walk_speed: f32,
+  pub back_walk_speed: f32,
+  pub dash_speed: f32,
+  pub gravity: f32,
+  pub jump_height: f32,
+  pub max_airdash_time: u8,
+  pub max_air_backdash_time: u8,
+  pub backdash: Backdash
+}
+
 #[derive(Component, Clone, Debug)]
-pub struct CharacterStatus {
+pub struct CharacterMovement {
   pub action_state: ActionState,
   pub previous_action_state: ActionState,
   pub facing_vector: f32,
@@ -32,9 +49,47 @@ pub struct CharacterStatus {
   pub max_air_backdash_time: u8,
   pub int_force: Option<InterpolatedForce>,
   pub backdash: Backdash,
+  pub attacks: HashMap<String, Attack>
 }
 
-impl CharacterStatus {
+impl CharacterMovement {
+  pub fn from_serialized(s: CharacterMovementSerialized, library: &CharacterLibrary, character_name: &str) -> Self {
+    let mut attacks = HashMap::new();
+    let my_regex = Regex::new(&format!("(^{}.+)", character_name)[..]).unwrap();
+    for (attack_id, attack) in library.read_attacks() {
+      if my_regex.is_match(attack_id) {
+        attacks.insert(attack_id.clone(), attack.clone());
+      }
+    }
+
+    CharacterMovement {
+      jumpsquat: s.jumpsquat,
+      air_jumps: s.air_jumps,
+      airdashes: s.airdashes,
+      air_dash_speed: s.air_dash_speed,
+      air_back_dash_speed: s.air_back_dash_speed,
+      walk_speed: s.walk_speed,
+      back_walk_speed: s.back_walk_speed,
+      dash_speed: s.dash_speed,
+      gravity: s.gravity,
+      jump_height: s.jump_height,
+      max_airdash_time: s.max_airdash_time,
+      max_air_backdash_time: s.max_air_backdash_time,
+      backdash: s.backdash,
+      facing_vector: 1.0,
+      movement_event: None,
+      busy: 0,
+      is_grounded: true,
+      air_jumps_remaining: s.air_jumps,
+      airdashes_remaining: s.airdashes,
+      airdash_lockout: 0,
+      velocity: Vec2::ZERO,
+      int_force: None,
+      attacks,
+      action_state: ActionState::Standing,
+      previous_action_state: ActionState::Standing
+    }
+  }
   // Setters
 
   /// Set a players ActionState
@@ -298,7 +353,7 @@ impl CharacterStatus {
 
   pub fn execute_backdash(&mut self) {
     match self.backdash {
-      Backdash::STANDARD {speed, busy, motion_duration} => {
+      Backdash::Standard {speed, busy, motion_duration} => {
         let int_force = InterpolatedForce::new(
           Vec2::new(-speed * self.facing_vector, 0.0),
           Vec2::new(-2.0 * self.facing_vector, 0.0),
@@ -312,11 +367,128 @@ impl CharacterStatus {
   }
 }
 
-#[derive(Clone, Copy, Debug)]
+/// States representing all possible player actions
+#[derive(Clone, Debug)]
+pub enum ActionState {
+  Dashing,
+  Walking,
+  BackWalking,
+  Attacking {duration: u8, attack: Attack},
+  AttackingAirborne,
+  Blocking,
+  CrouchBlocking,
+  Crouching,
+  Jumpsquat {squat: u8, velocity: Vec2 },
+  AirJumpsquat {squat: u8, velocity: Vec2 },
+  Airborne,
+  Juggle,
+  Standing,
+  BackDashing,
+  AirDashing {duration: u8, velocity: Vec2},
+  AirBackDashing {duration: u8, velocity: Vec2} 
+}
+
+impl PartialEq for ActionState {
+  fn eq(&self, other: &Self) -> bool {
+    match (self, other) {
+      (ActionState::Dashing, ActionState::Dashing) => true,
+      (ActionState::Walking, ActionState::Walking) => true,
+      (ActionState::BackWalking, ActionState::BackWalking) => true,
+      (ActionState::Attacking {duration: _, attack: _}, ActionState::Attacking {duration: _, attack: _}) => true,
+      (ActionState::Blocking, ActionState::Blocking) => true,
+      (ActionState::CrouchBlocking, ActionState::CrouchBlocking) => true,
+      (ActionState::Crouching, ActionState::Crouching) => true,
+      (ActionState::Airborne, ActionState::Airborne) => true,
+      (ActionState::Juggle, ActionState::Juggle) => true,
+      (ActionState::Standing, ActionState::Standing) => true,
+      (ActionState::BackDashing, ActionState::BackDashing) => true,
+      (ActionState::Jumpsquat {squat:_, velocity:_},ActionState::Jumpsquat {squat: _, velocity:_ }) => true,
+      (ActionState::AirJumpsquat {squat:_, velocity:_}, ActionState::AirJumpsquat {squat:_, velocity:_}) => true,
+      (ActionState::AirDashing {duration:_, velocity:_},ActionState::AirDashing {duration:_, velocity:_},) => true,
+      (ActionState::AirBackDashing {duration:_, velocity:_}, ActionState::AirBackDashing {duration:_, velocity:_}) => true,
+      _ => false,
+    }
+  }
+}
+
+impl ActionState {
+  pub fn tick(&mut self) {
+    match self {
+      ActionState::Jumpsquat { squat, velocity: _} => {
+        *squat = countdown(*squat);
+      },
+      ActionState::AirJumpsquat { squat, velocity: _} => {
+        *squat = countdown(*squat);
+      },
+      ActionState::AirDashing {duration, velocity: _} => {
+        *duration = countdown(*duration);
+      },
+      ActionState::AirBackDashing {duration, velocity: _} => {
+        *duration = countdown(*duration);
+      },
+      _ => ()
+    }
+  }
+
+  pub fn is_finished_jumping(&self) -> bool {
+    match self {
+      ActionState::Jumpsquat{squat, velocity: _} => {
+        if *squat == 0 {
+          return true;
+        } else {
+          return false;
+        }
+      },
+      ActionState::AirJumpsquat{squat, velocity: _} => {
+        if *squat == 0 {
+          return true;
+        } else {
+          return false;
+        }
+      }
+      _ => return false,
+    }
+  }
+
+  pub fn is_finished_airdashing(&self) -> bool {
+    match self {
+      ActionState::AirDashing {duration, velocity: _} => {
+        if *duration == 0 {
+          return true;
+        } else {
+          return false;
+        }
+      },
+      ActionState::AirBackDashing {duration, velocity: _} => {
+        if *duration == 0 {
+          return true;
+        } else {
+          return false;
+        }
+      },
+      _ => return false,
+    }
+  }
+
+  pub fn get_jump_velocity(&self) -> Vec2{
+    match self {
+      ActionState::AirJumpsquat {squat: _, velocity} => *velocity,
+      ActionState::Jumpsquat {squat: _, velocity} => *velocity,
+      _ => Vec2::ZERO,
+    }
+  }
+}
+
+impl Default for ActionState {
+  fn default() -> Self {Self::Standing}
+}
+
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Backdash {
-  STANDARD {speed: f32, busy: u8, motion_duration: u8},
-  TELEPORT { distance: f32, busy: u8, motion_duration: u8},
-  LEAP {busy: u8, motion_duration: u8}
+  Standard {speed: f32, busy: u8, motion_duration: u8},
+  Teleport { distance: f32, busy: u8, motion_duration: u8},
+  Leap {busy: u8, motion_duration: u8}
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -373,43 +545,6 @@ pub enum MovementEventType {
   AIRDASH,
   AIRBACKDASH,
 }
-
-
-
-impl Default for CharacterStatus {
-  fn default() -> Self {
-    CharacterStatus {
-      action_state: ActionState::default(),
-      previous_action_state: ActionState::default(),
-      facing_vector: 1.0,
-      movement_event: None,
-      busy: 0,
-      jumpsquat: 3,
-      is_grounded: true,
-      air_jumps: 1,
-      air_jumps_remaining: 1,
-      airdashes: 1,
-      airdashes_remaining: 1,
-      airdash_lockout: 0,
-      air_dash_speed: 8.0,
-      air_back_dash_speed: 6.0,
-      velocity: Vec2::ZERO,
-      walk_speed: 4.0,
-      back_walk_speed: 2.5,
-      dash_speed: 8.0,
-      gravity: 1.0,
-      jump_height: 20.0,
-      max_airdash_time: 25,
-      max_air_backdash_time: 15,
-      int_force: None,
-      backdash: Backdash::STANDARD{
-        speed: 25.0,
-        busy: 20,
-        motion_duration: 20
-      }
-    }
-  }
-}
 pub trait SpawnPlayer {
   fn spawn_player(
     &mut self, 
@@ -427,33 +562,20 @@ impl SpawnPlayer for Commands<'_, '_> {
     character_prefix: &str, 
     library: &CharacterLibrary,
     texture_atlas: Handle<TextureAtlas>) {
-    let (transform, facing_vector, flip_x) = match player_id {
-      PlayerId::P1 => (
-        Transform::from_xyz(-40.0,0.0,0.0),
-        1.0,
-        false
-      ),
-      PlayerId::P2 => (
-        Transform::from_xyz(40.0,0.0,0.0),
-        -1.0,
-        true
-      )
+    let transform = match player_id {
+      PlayerId::P1 => Transform::from_xyz(-40.0,0.0,0.0),
+      PlayerId::P2 => Transform::from_xyz(40.0,0.0,0.0),
     };
 
+    let movement = library.get_movement(character_prefix).unwrap();
+
     self.spawn_bundle(SpriteSheetBundle {
-        sprite: TextureAtlasSprite {
-          flip_x,
-          ..Default::default()
-        },
         texture_atlas,
         transform,
         ..Default::default()
       })
       .insert(player_id)
-      .insert(CharacterStatus {
-        facing_vector,
-        ..Default::default()
-      })
+      .insert(movement)
       .insert(AnimationController::new(character_prefix, library));
   }
 }

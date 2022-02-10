@@ -4,7 +4,8 @@ pub use crate::prelude::*;
 pub struct CharacterSheetSerialized {
   pub animations: Vec<AnimationSerialized>,
   pub hitboxes: Vec<HitboxSerialized>,
-  pub attacks: Vec<AttackSerialized>
+  pub attacks: Vec<AttackSerialized>,
+  pub movement: CharacterMovementSerialized
 }
 
 #[derive(Deserialize, Serialize)]
@@ -21,6 +22,7 @@ pub struct CharacterLibrary {
   animations: HashMap<String, Animation>,
   hitboxes: HashMap<String, Hitbox>,
   attacks: HashMap<String, Attack>,
+  movements: HashMap<String, CharacterMovement>
 }
 
 impl CharacterLibrary {
@@ -28,10 +30,12 @@ impl CharacterLibrary {
     let animations: HashMap<String, Animation> = HashMap::new();
     let hitboxes: HashMap<String, Hitbox> = HashMap::new();
     let attacks: HashMap<String, Attack> = HashMap::new();
+    let movements: HashMap<String, CharacterMovement> = HashMap::new();
     CharacterLibrary {
       animations,
       hitboxes,
-      attacks
+      attacks,
+      movements
     }
   }
 
@@ -84,6 +88,17 @@ impl CharacterLibrary {
     self.add_attacks(
       HashMap::from_iter::<HashMap<String, Attack>>(raw_attacks.iter().cloned().collect())
     );
+
+    let movement = CharacterMovement::from_serialized(
+      character_sheet.movement,
+      &self,
+      character_name
+    );
+
+    self.movements.insert(
+      character_name.to_string(),
+      movement
+    );
   }
 }
 
@@ -110,6 +125,14 @@ impl CharacterLibrary {
   pub fn get_hitbox(&self, hitbox_id: String) -> Option<Hitbox> {
     if let Some(hitbox) = self.hitboxes.get(&hitbox_id) {
       return Some(hitbox.clone());
+    } else {
+      return None;
+    }
+  }
+
+  pub fn get_movement(&self, movement_id: &str) -> Option<CharacterMovement> {
+    if let Some(movement) = self.movements.get(movement_id) {
+      return Some(movement.clone());
     } else {
       return None;
     }
