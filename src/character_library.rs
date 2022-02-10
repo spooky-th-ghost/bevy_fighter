@@ -5,7 +5,16 @@ pub struct CharacterSheetSerialized {
   pub animations: Vec<AnimationSerialized>,
   pub hitboxes: Vec<HitboxSerialized>,
   pub attacks: Vec<AttackSerialized>,
-  pub movement: CharacterMovementSerialized
+  pub movement: CharacterMovementSerialized,
+  pub sprite_info: SpriteInfo
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct SpriteInfo {
+  pub sprite_x: f32,
+  pub sprite_y: f32,
+  pub columns: usize,
+  pub rows: usize,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -22,7 +31,9 @@ pub struct CharacterLibrary {
   animations: HashMap<String, Animation>,
   hitboxes: HashMap<String, Hitbox>,
   attacks: HashMap<String, Attack>,
-  movements: HashMap<String, CharacterMovement>
+  movements: HashMap<String, CharacterMovement>,
+  atlases: HashMap<String, Handle<TextureAtlas>>,
+
 }
 
 impl CharacterLibrary {
@@ -31,20 +42,34 @@ impl CharacterLibrary {
     let hitboxes: HashMap<String, Hitbox> = HashMap::new();
     let attacks: HashMap<String, Attack> = HashMap::new();
     let movements: HashMap<String, CharacterMovement> = HashMap::new();
+    let atlases: HashMap<String, Handle<TextureAtlas>> = HashMap::new();
     CharacterLibrary {
       animations,
       hitboxes,
       attacks,
-      movements
+      movements,
+      atlases,
     }
   }
 
-  pub fn load_character_data(&mut self, character_name: &str) {
+pub fn load_character_data(&mut self, character_name: &str, asset_server: &Res<AssetServer>, texture_atlases: &mut ResMut<Assets<TextureAtlas>>) {
   let raw_path = format!("./assets/character_data/{}.json", character_name);
   let path = Path::new(&raw_path[..]);
   if let Ok(raw_string) = read_to_string(path) {
     let raw_slice = &raw_string[..]; 
     let character_sheet: CharacterSheetSerialized = from_str(raw_slice).unwrap();
+    let SpriteInfo {sprite_x, sprite_y, columns, rows} = character_sheet.sprite_info;
+
+    let raw_texture_path = format!("sprites/{}.png", character_name);
+    let texture_path = Path::new(&raw_texture_path[..]);
+    let texture_handle = asset_server.load(texture_path);
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(sprite_x,sprite_y), columns, rows);
+    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+
+    self.atlases.insert(
+      character_name.to_string(),
+      texture_atlas_handle
+    );
 
     let mut raw_hitboxes: Vec<(String, Hitbox)> = Vec::new();
     let mut raw_anims: Vec<(String, Animation)> = Vec::new();
@@ -138,6 +163,14 @@ impl CharacterLibrary {
     }
   }
 
+  pub fn get_atlas(&self, atlas_id: &str) -> Option<Handle<TextureAtlas>> {
+    if let Some(atlas) = self.atlases.get(atlas_id) {
+      return Some(atlas.clone());
+    } else {
+      return None;
+    }
+  }
+
   pub fn read_animations(&self) -> Iter<String, Animation> {
     self.animations.iter()
   }
@@ -149,4 +182,14 @@ impl CharacterLibrary {
   pub fn read_attacks(&self) -> Iter<String, Attack> {
     self.attacks.iter()
   }
+}
+
+
+pub fn initialize_character_library(
+    asset_server: Res<AssetServer>,
+    mut character_library: ResMut<CharacterLibrary>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>> 
+) {
+    character_library.load_character_data("roa", &asset_server, &mut texture_atlases);
+    character_library.load_character_data("aoko", &asset_server, &mut texture_atlases);
 }

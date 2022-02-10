@@ -1,4 +1,10 @@
 {
+  "sprite_info": {
+    "sprite_x": 256.0,
+    "sprite_y": 256.0,
+    "columns": 12,
+    "rows": 16
+  },
   "movement": {
     "jumpsquat": 3,
     "air_jumps": 1,

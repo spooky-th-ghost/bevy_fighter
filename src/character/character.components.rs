@@ -551,7 +551,6 @@ pub trait SpawnPlayer {
     player_id: PlayerId, 
     character_prefix: &str, 
     library: &CharacterLibrary,
-    texture_atlas: Handle<TextureAtlas>
   );
 }
 
@@ -561,13 +560,14 @@ impl SpawnPlayer for Commands<'_, '_> {
     player_id: PlayerId, 
     character_prefix: &str, 
     library: &CharacterLibrary,
-    texture_atlas: Handle<TextureAtlas>) {
+  ) {
     let transform = match player_id {
       PlayerId::P1 => Transform::from_xyz(-40.0,0.0,0.0),
       PlayerId::P2 => Transform::from_xyz(40.0,0.0,0.0),
     };
 
     let movement = library.get_movement(character_prefix).unwrap();
+    let texture_atlas = library.get_atlas(character_prefix).unwrap();
 
     self.spawn_bundle(SpriteSheetBundle {
         texture_atlas,

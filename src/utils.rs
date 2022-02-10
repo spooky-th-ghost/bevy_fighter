@@ -12,6 +12,8 @@ pub fn countdown(val: u8) -> u8 {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[derive(SystemLabel)]
 pub enum FighterSystemLabels {
+    InitializeCharacterData,
+    Setup,
     InputWrite,
     InputRead,
     StatusUpdate,
