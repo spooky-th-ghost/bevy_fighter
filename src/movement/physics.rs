@@ -61,12 +61,13 @@ impl InterpolatedForce {
 }
 
 /// States representing all possible player actions
-#[derive(Clone,Copy, Debug)]
+#[derive(Clone, Debug)]
 pub enum ActionState {
   Dashing,
   Walking,
   BackWalking,
-  Attacking,
+  Attacking {duration: u8, attack: Attack},
+  AttackingAirborne,
   Blocking,
   CrouchBlocking,
   Crouching,
@@ -86,7 +87,7 @@ impl PartialEq for ActionState {
       (ActionState::Dashing, ActionState::Dashing) => true,
       (ActionState::Walking, ActionState::Walking) => true,
       (ActionState::BackWalking, ActionState::BackWalking) => true,
-      (ActionState::Attacking, ActionState::Attacking) => true,
+      (ActionState::Attacking {duration: _, attack: _}, ActionState::Attacking {duration: _, attack: _}) => true,
       (ActionState::Blocking, ActionState::Blocking) => true,
       (ActionState::CrouchBlocking, ActionState::CrouchBlocking) => true,
       (ActionState::Crouching, ActionState::Crouching) => true,

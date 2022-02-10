@@ -1,3 +1,9 @@
-mod animation_library;
+#[path = "animation.components.rs"]
+mod animation_components;
 
-pub use animation_library::*;
+#[path = "animation.systems.rs"]
+mod animation_systems;
+
+
+pub use animation_components::*;
+pub use animation_systems::*;

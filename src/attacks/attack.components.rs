@@ -18,7 +18,7 @@ impl Attack {
     }
   }
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct HitboxEvent {
   pub hitbox: Hitbox,
   pub position: Vec2,
@@ -62,7 +62,7 @@ pub struct HurtboxEvent {
   size: Vec2,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct Hitbox {
   /// Attack level, effects hit/block stun
   attack_level: u8,
@@ -106,14 +106,14 @@ impl Hitbox {
   }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum HitState {
   None,
   Hit,
   Blocked
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum HurtboxType {
   Upper,
   Lower,
@@ -121,7 +121,7 @@ pub enum HurtboxType {
 }
 
 /// How the attack must be blocked
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Copy)]
 pub enum HitboxProperty {
   Mid,
   Low,

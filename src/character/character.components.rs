@@ -6,7 +6,7 @@ pub enum PlayerId {
   P2
 }
 
-#[derive(Component, Clone, Copy, Debug)]
+#[derive(Component, Clone, Debug)]
 pub struct CharacterStatus {
   pub action_state: ActionState,
   pub previous_action_state: ActionState,
@@ -68,7 +68,7 @@ impl CharacterStatus {
 
   /// Get a players ActionState
   pub fn get_action_state(&self) -> ActionState {
-    return self.action_state;
+    return self.action_state.clone();
   }
 
   /// Get if a player is grounded
@@ -138,7 +138,7 @@ impl CharacterStatus {
   pub fn tick(&mut self) {
     self.busy = countdown(self.busy);
     self.airdash_lockout = countdown(self.airdash_lockout);
-    self.previous_action_state = self.action_state;
+    self.previous_action_state = self.action_state.clone();
     self.action_state.tick();
   }
 

@@ -10,13 +10,12 @@ mod utils;
 mod animation;
 mod collision;
 mod fighter_plugin;
-mod player_systems;
-mod player_data;
+mod character;
 mod debug_ui;
 mod camera;
+mod character_library;
 
 pub mod prelude {
-  // external crates
   pub use lazy_static;
   pub use regex::Regex;
   pub use serde::{Deserialize, Serialize};
@@ -46,7 +45,10 @@ pub mod prelude {
     path::Path,
     fs::read_to_string,
     io::BufReader,
-    collections::HashMap
+    collections::{
+      HashMap,
+      hash_map::Iter
+    }
   };
   
   // local mods
@@ -57,9 +59,9 @@ pub mod prelude {
   pub use crate::animation::*;
   pub use crate::collision::*;
   pub use crate::fighter_plugin::*;
-  pub use crate::player_systems::*;
-  pub use crate::player_data::*;
+  pub use crate::character::*;
   pub use crate::debug_ui::*;
   pub use crate::attacks::*;
   pub use crate::camera::*;
+  pub use crate::character_library::*;
   }

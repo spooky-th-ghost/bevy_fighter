@@ -25,7 +25,7 @@ fn setup(
 
     character_library.load_character_data("roa");
     character_library.load_character_data("aoko");
-    println!("{:?}", character_library.attacks);
+    println!("{:?}", character_library.read_attacks());
     coms
         .spawn_bundle(OrthographicCameraBundle::new_2d())
         .insert(CameraController {
