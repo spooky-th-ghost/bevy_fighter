@@ -19,9 +19,7 @@ impl SpawnDebugUi for Commands<'_,'_> {
                 flex_direction: FlexDirection::Row,
                 ..Default::default()
             },
-            // Use `Text` directly
             text: Text {
-                // Construct a `Vec` of `TextSection`s
                 sections: vec![
                     TextSection {
                         value: "Action State: ".to_string(),

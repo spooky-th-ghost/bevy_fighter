@@ -11,7 +11,6 @@ impl Plugin for FighterPlugin {
       .insert_resource(CharacterLibrary::new())
       .insert_resource(PlayerData::default())
       .add_startup_system(initialize_character_library.label(FighterSystemLabels::InitializeCharacterData))
-      //.insert_resource(CollisionBoxColors::new(0.4))
       .add_stage("main",SystemStage::single_threaded()
         .with_run_criteria(FixedTimestep::step(0.01667))
         .with_system(
