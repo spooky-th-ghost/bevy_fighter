@@ -5,41 +5,79 @@ pub struct FighterInputEvent{
   pub player_id: PlayerId,
   /// Direction of the input, expressed in numpad notation
   pub motion: u8,
+  /// Reperesents what buttons are pressed as a single byte
+  pub button_press: ButtonPress,
   /// Any command motion found in the input event
   pub special_motion: Option<CommandType>,
   /// Duration of the current command motion
   pub special_motion_duration: u8,
-  /// Buttons Pressed
-  pub pressed: Vec<FighterButtonType>,
-  /// Buttons Just Pressed
-  pub just_pressed: Vec<FighterButtonType>
 }
 
 impl FighterInputEvent{
   fn new(
     motion: u8, 
     player_id: PlayerId, 
-    pressed: Vec<FighterButtonType>, 
-    just_pressed: Vec<FighterButtonType>
+    button_press: ButtonPress
   ) -> Self {
     FighterInputEvent {
       motion,
       player_id,
+      button_press,
       special_motion_duration: 0,
       special_motion: None,
-      pressed,
-      just_pressed,
     }
   }
 }
+
 #[derive(Debug,Clone, Copy)]
-pub enum FighterButtonType {
-  A,
-  B,
-  C,
-  D,
-  E,
-  F,
+pub struct ButtonPress {
+  pub value: u8,
+}
+
+impl ButtonPress {
+  pub fn new(value: u8) -> Self {
+    ButtonPress {
+      value
+    }
+  }
+
+  pub fn any_pressed(&self) -> bool {
+    return self.value != 0;
+  }
+
+  pub fn to_string(&self) -> String {
+    let mut button_string = String::new();
+    if self.is_bit_set(0) {button_string.push('A')}
+    if self.is_bit_set(1) {button_string.push('B')}
+    if self.is_bit_set(2) {button_string.push('C')}
+    if self.is_bit_set(3) {button_string.push('D')}
+    if self.is_bit_set(4) {button_string.push('E')}
+    if self.is_bit_set(5) {button_string.push('F')}
+    if self.is_bit_set(6) {button_string.push('G')}
+    if self.is_bit_set(7) {button_string.push('H')}
+    return button_string;
+  }
+
+  pub fn is_button_pressed(&self, button: char) -> bool {
+    let shift: u8 = match button {
+      'A' => 0,
+      'B' => 1,
+      'C' => 2,
+      'D' => 3,
+      'E' => 4,
+      'F' => 5,
+      'G' => 6,
+      'H' => 7,
+        _ => return false
+    };
+
+    return self.is_bit_set(shift);
+  }
+
+
+  pub fn is_bit_set(&self, position: u8) -> bool {
+    return (self.value & (1 << position)) != 0;
+  }
 }
 
 /// Notation, Priority, and Regex for special motions
@@ -101,16 +139,8 @@ pub fn write_fighter_inputs(
       d,
       e,
       f,
-      ..} = mapper.get_pressed_buttons(&keyboard_input, &button_input);
-
-    let InputActionsPressed {
-      a:j_a, 
-      b:j_b, 
-      c:j_c, 
-      d:j_d,
-      e:j_e,
-      f:j_f,
-      ..} = mapper.get_just_pressed_buttons(&keyboard_input, &button_input);
+      macro_1,
+      macro_2} = mapper.get_pressed_buttons(&keyboard_input, &button_input);
 
 
     if left {
@@ -171,29 +201,22 @@ pub fn write_fighter_inputs(
       }
     }
 
-    let mut pressed = Vec::new();
-    let mut just_pressed = Vec::new();
 
-    if a {pressed.push(FighterButtonType::A)}
-    if b {pressed.push(FighterButtonType::B)}
-    if c {pressed.push(FighterButtonType::C)}
-    if d {pressed.push(FighterButtonType::D)}
-    if e {pressed.push(FighterButtonType::E)}
-    if f {pressed.push(FighterButtonType::F)}
-
-    if j_a {just_pressed.push(FighterButtonType::A)}
-    if j_b {just_pressed.push(FighterButtonType::B)}
-    if j_c {just_pressed.push(FighterButtonType::C)}
-    if j_d {just_pressed.push(FighterButtonType::D)}
-    if j_e {just_pressed.push(FighterButtonType::E)}
-    if j_f {just_pressed.push(FighterButtonType::F)}
-
+    let mut pressed_byte: u8 = 0b0000_0000;
+    if a {pressed_byte |= 0b0000_0001}
+    if b {pressed_byte |= 0b0000_0010}
+    if c {pressed_byte |= 0b0000_0100}
+    if d {pressed_byte |= 0b0000_1000}
+    if e {pressed_byte |= 0b0001_0000}
+    if f {pressed_byte |= 0b0010_0000}
+    if macro_1 {pressed_byte |= 0b0100_0000}
+    if macro_2 {pressed_byte |= 0b1000_0000}
+    let button_press = ButtonPress::new(pressed_byte);
     input_writer.send(
       FighterInputEvent::new(
         motion,
         *player_id,
-        pressed,
-        just_pressed
+        button_press
       )
     );
 

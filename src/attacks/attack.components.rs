@@ -2,8 +2,9 @@ use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct Attack {
-  hitbox_events: Vec<HitboxEvent>,
-  busy: u8,
+  pub name: String,
+  pub hitbox_events: Vec<HitboxEvent>,
+  pub busy: u8,
 }
 impl Attack {
   pub fn from_serialized(s: AttackSerialized, library: &CharacterLibrary, character_name: &str) -> Self {
@@ -13,6 +14,7 @@ impl Attack {
       hitbox_events.push(HitboxEvent::from_serialized(s_he, library, character_name));
     }
     Attack {
+      name: s.name,
       hitbox_events,
       busy: s.busy,
     }

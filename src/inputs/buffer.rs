@@ -3,13 +3,12 @@ pub use crate::prelude::*;
 #[derive(Debug)]
 pub struct FighterInputBuffer {
   pub motions: Vec<u8>,
-  pub pressed: Vec<Vec<FighterButtonType>>,
-  pub just_pressed: Vec<Vec<FighterButtonType>>,
   pub player_id: PlayerId,
   pub command_priority: u8,
   pub command_duration: u8,
   pub command_type: Option<CommandType>,
   pub current_motion: u8,
+  pub current_press: ButtonPress,
   pub previous_motion: u8,
   pub command_lockout: u8,
 }
@@ -18,13 +17,12 @@ impl FighterInputBuffer {
   pub fn new(player_id: PlayerId) -> Self {
     FighterInputBuffer {
       motions: Vec::new(),
-      pressed: Vec::new(),
-      just_pressed: Vec::new(),
       player_id,
       command_priority: 0,
       command_duration: 0,
       command_type: None,
       current_motion: 5,
+      current_press: ButtonPress::new(0),
       previous_motion: 5,
       command_lockout: 0,
     }
@@ -34,25 +32,20 @@ impl FighterInputBuffer {
     self.tick();
     if event.player_id == self.player_id {
       self.motions.push(event.motion);
-      self.pressed.push(event.pressed.clone());
-      self.just_pressed.push(event.just_pressed.clone());
       self.previous_motion = self.current_motion;
       self.current_motion = event.motion;
+      self.current_press = event.button_press; 
     };
     self.extract_special_motions();
+  }
+
+  pub fn current_input(&self) -> String {
+    return format!("{:?}{}", self.current_motion, &self.current_press.to_string()[..]);
   }
 
   fn tick(&mut self) {
     if self.motions.len() > 20 {
       self.motions.remove(0);
-    }
-
-    if self.pressed.len() > 20 {
-      self.pressed.remove(0);
-    }
-
-    if self.just_pressed.len() > 20 {
-      self.just_pressed.remove(0);
     }
 
     if self.command_duration == 0 {

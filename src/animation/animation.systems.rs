@@ -7,7 +7,7 @@ pub fn read_animation_transitions(
   for event in transition_reader.iter() {
     for (player_id, mut controller) in query.iter_mut() {
       if event.player_id == *player_id {
-        controller.transition(event.transition);
+        controller.transition(event.transition.clone());
       }
     }
   }

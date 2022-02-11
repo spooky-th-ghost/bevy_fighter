@@ -24,6 +24,25 @@ pub struct CharacterMovementSerialized {
 }
 
 #[derive(Component, Clone, Debug)]
+pub struct BeatChain {
+  pub all_attacks: Vec<String>,
+  pub available_attacks: Vec<String>,
+}
+
+impl BeatChain {
+  pub fn from_attack_names(attack_names: Vec<String>) -> Self {
+    BeatChain {
+      all_attacks: attack_names.clone(),
+      available_attacks: attack_names.clone()
+    }
+  }
+
+  pub fn reset(&mut self) {
+    self.available_attacks = self.all_attacks.clone();
+  }
+}
+
+#[derive(Component, Clone, Debug)]
 pub struct CharacterMovement {
   pub action_state: ActionState,
   pub previous_action_state: ActionState,
@@ -49,16 +68,20 @@ pub struct CharacterMovement {
   pub max_air_backdash_time: u8,
   pub int_force: Option<InterpolatedForce>,
   pub backdash: Backdash,
-  pub attacks: HashMap<String, Attack>
+  pub attacks: HashMap<String, Attack>,
+  pub beat_chain: BeatChain
 }
 
 impl CharacterMovement {
   pub fn from_serialized(s: CharacterMovementSerialized, library: &CharacterLibrary, character_name: &str) -> Self {
     let mut attacks = HashMap::new();
+    let mut attack_names = Vec::new();
     let my_regex = Regex::new(&format!("(^{}.+)", character_name)[..]).unwrap();
     for (attack_id, attack) in library.read_attacks() {
       if my_regex.is_match(attack_id) {
-        attacks.insert(attack_id.clone(), attack.clone());
+        let trimmed_attack_name = attack_id.replace(character_name, "").replace("_","");
+        attack_names.push(trimmed_attack_name.clone());
+        attacks.insert(trimmed_attack_name.clone(), attack.clone());
       }
     }
 
@@ -86,6 +109,7 @@ impl CharacterMovement {
       velocity: Vec2::ZERO,
       int_force: None,
       attacks,
+      beat_chain: BeatChain::from_attack_names(attack_names),
       action_state: ActionState::Standing,
       previous_action_state: ActionState::Standing
     }
@@ -120,6 +144,18 @@ impl CharacterMovement {
   }
 
   // Getters
+  pub fn find_attack(&mut self, motion: u8, buttons: String) -> Option<Attack> {
+    let mut current_regex: Regex;
+    for button in buttons.chars().rev() {
+      current_regex = Regex::new(&format!("({}).*({})", motion, button)[..]).unwrap();
+      for attack_name in self.beat_chain.available_attacks.iter() {
+        if current_regex.is_match(attack_name) {
+          return self.attacks.get(attack_name).cloned();
+        }
+      }
+    }
+    return None;
+  }
 
   /// Get a players ActionState
   pub fn get_action_state(&self) -> ActionState {
@@ -156,7 +192,8 @@ impl CharacterMovement {
 
   pub fn calculate_transition(&self) -> Option<AnimationTransition> {
 
-    match self.action_state {
+    match &self.action_state {
+      ActionState::Attacking {duration: _, attack} => return Some(AnimationTransition::Attack{name: attack.name.clone()}),
       ActionState::Jumpsquat {squat: _, velocity: _} => return Some(AnimationTransition::ToRise),
       ActionState::Walking => return Some(AnimationTransition::ToWalk),
       ActionState::BackWalking => return Some(AnimationTransition::ToBackwalk),
@@ -180,6 +217,7 @@ impl CharacterMovement {
           ActionState::BackWalking => return Some(AnimationTransition::BackwalkToIdle),
           ActionState::Crouching => return Some(AnimationTransition::CrouchToIdle),
           ActionState::Airborne => return Some(AnimationTransition::FallToIdle),
+          ActionState::Attacking {duration: _, attack: _} => return Some(AnimationTransition::ToIdle),
           _ => return None
         }
       },
@@ -193,66 +231,66 @@ impl CharacterMovement {
   pub fn tick(&mut self) {
     self.busy = countdown(self.busy);
     self.airdash_lockout = countdown(self.airdash_lockout);
-    self.previous_action_state = self.action_state.clone();
     self.action_state.tick();
+    self.previous_action_state = self.action_state.clone();
   }
 
   // Run each frame to determine the players action state and if any movement events should be executed
   pub fn update_action_state(&mut self, buffer: &mut FighterInputBuffer) {
     if !self.get_is_busy() {
-      if self.get_is_grounded() {
-        match buffer.current_motion {
-          5 => self.action_state = ActionState::Standing,
-          6 => {
-            if self.action_state != ActionState::Dashing {
-              self.action_state = ActionState::Walking;
-            }
-          },
-          4 => self.action_state = ActionState::BackWalking,
-          1 | 2 | 3 => self.action_state = ActionState::Crouching,
-          7 | 8 => {
-            self.buffer_jump(buffer.current_motion, false,false, false);
-          },
-          9 => {
-            if self.action_state == ActionState::Dashing {
-              self.buffer_jump(buffer.current_motion, false,true, false);
-            } else {
+        if self.get_is_grounded() {
+          match buffer.current_motion {
+            5 => self.action_state = ActionState::Standing,
+            6 => {
+              if self.action_state != ActionState::Dashing {
+                self.action_state = ActionState::Walking;
+              }
+            },
+            4 => self.action_state = ActionState::BackWalking,
+            1 | 2 | 3 => self.action_state = ActionState::Crouching,
+            7 | 8 => {
               self.buffer_jump(buffer.current_motion, false,false, false);
+            },
+            9 => {
+              if self.action_state == ActionState::Dashing {
+                self.buffer_jump(buffer.current_motion, false,true, false);
+              } else {
+                self.buffer_jump(buffer.current_motion, false,false, false);
+              }
             }
+            _ => ()
           }
-          _ => ()
-        }
-        if let Some(ct) = buffer.command_type {
-          match ct {
-            CommandType::DASH => {
-              self.action_state = ActionState::Dashing;
-              buffer.consume_motion();
-            },
-            CommandType::BACK_DASH => {
-              self.action_state = ActionState::BackDashing;
-              self.movement_event = Some(MovementEvent::new(MovementEventType::BACKDASH, buffer.current_motion));
-              buffer.consume_motion();
-            },
-            _ => ()
-          }               
-        }
-
-      } else {
-        if let Some(ct) = buffer.command_type {
-          match ct {
-            CommandType::DASH => {
-              self.buffer_airdash(true);
-              buffer.consume_motion();
-            },
-            CommandType::BACK_DASH =>  {
-              self.buffer_airdash(false);
-              buffer.consume_motion();
-            },
-            _ => ()
+          if let Some(ct) = buffer.command_type {
+            match ct {
+              CommandType::DASH => {
+                self.action_state = ActionState::Dashing;
+                buffer.consume_motion();
+              },
+              CommandType::BACK_DASH => {
+                self.action_state = ActionState::BackDashing;
+                self.movement_event = Some(MovementEvent::new(MovementEventType::BACKDASH, buffer.current_motion));
+                buffer.consume_motion();
+              },
+              _ => ()
+            }               
+          }
+        } else {
+          if let Some(ct) = buffer.command_type {
+            match ct {
+              CommandType::DASH => {
+                self.buffer_airdash(true);
+                buffer.consume_motion();
+              },
+              CommandType::BACK_DASH =>  {
+                self.buffer_airdash(false);
+                buffer.consume_motion();
+              },
+              _ => ()
+            }
           }
         }
       }
-    }
+
   }
 
   /// Set the players velocity
@@ -273,6 +311,23 @@ impl CharacterMovement {
     } else {
       return self.velocity;
     }
+  }
+
+  pub fn attack_to_execute(&mut self,  buffer: &mut FighterInputBuffer) -> Option<Attack> {
+    if !self.get_is_busy() {
+      if buffer.current_press.any_pressed() {
+        return self.find_attack(buffer.current_motion, buffer.current_press.to_string());
+      } else {
+        return None;
+      }
+    } else {
+      return None;
+    }
+  }
+
+  pub fn buffer_attack(&mut self, attack: Attack) {
+    self.action_state = ActionState::Attacking {duration: attack.busy, attack: attack.clone()};
+    self.busy = attack.busy + 1;
   }
 
   pub fn buffer_jump(&mut self, motion: u8, superjump: bool, dashing: bool, airborne: bool) {
@@ -351,6 +406,12 @@ impl CharacterMovement {
     }
   }
 
+  pub fn execute_attack(&mut self) {
+    if self.action_state.is_finished_attacking() {
+      self.action_state = ActionState::Standing;
+    }
+  }
+
   pub fn execute_backdash(&mut self) {
     match self.backdash {
       Backdash::Standard {speed, busy, motion_duration} => {
@@ -390,24 +451,7 @@ pub enum ActionState {
 
 impl PartialEq for ActionState {
   fn eq(&self, other: &Self) -> bool {
-    match (self, other) {
-      (ActionState::Dashing, ActionState::Dashing) => true,
-      (ActionState::Walking, ActionState::Walking) => true,
-      (ActionState::BackWalking, ActionState::BackWalking) => true,
-      (ActionState::Attacking {duration: _, attack: _}, ActionState::Attacking {duration: _, attack: _}) => true,
-      (ActionState::Blocking, ActionState::Blocking) => true,
-      (ActionState::CrouchBlocking, ActionState::CrouchBlocking) => true,
-      (ActionState::Crouching, ActionState::Crouching) => true,
-      (ActionState::Airborne, ActionState::Airborne) => true,
-      (ActionState::Juggle, ActionState::Juggle) => true,
-      (ActionState::Standing, ActionState::Standing) => true,
-      (ActionState::BackDashing, ActionState::BackDashing) => true,
-      (ActionState::Jumpsquat {squat:_, velocity:_},ActionState::Jumpsquat {squat: _, velocity:_ }) => true,
-      (ActionState::AirJumpsquat {squat:_, velocity:_}, ActionState::AirJumpsquat {squat:_, velocity:_}) => true,
-      (ActionState::AirDashing {duration:_, velocity:_},ActionState::AirDashing {duration:_, velocity:_},) => true,
-      (ActionState::AirBackDashing {duration:_, velocity:_}, ActionState::AirBackDashing {duration:_, velocity:_}) => true,
-      _ => false,
-    }
+    std::mem::discriminant(self) == std::mem::discriminant(other)
   }
 }
 
@@ -426,6 +470,9 @@ impl ActionState {
       ActionState::AirBackDashing {duration, velocity: _} => {
         *duration = countdown(*duration);
       },
+      ActionState::Attacking {duration, attack: _} => {
+        *duration = countdown(*duration);
+      }
       _ => ()
     }
   }
@@ -468,6 +515,28 @@ impl ActionState {
       },
       _ => return false,
     }
+  }
+
+  pub fn is_finished_attacking(&self) -> bool {
+    match self {
+      ActionState::Attacking {duration, attack: _} => {
+        if *duration == 0 {
+          return true;
+        } else {
+          return false;
+        }
+      },
+      _ => return false,
+    }
+  }
+
+  pub fn perform_hitbox_events(&self) {
+     match self {
+      ActionState::Attacking {duration, attack} => {
+        // Need to spawn the hitboxes in hitbox events here
+      },
+      _ => ()
+     }
   }
 
   pub fn get_jump_velocity(&self) -> Vec2{

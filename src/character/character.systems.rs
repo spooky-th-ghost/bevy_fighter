@@ -87,17 +87,22 @@ pub fn determine_player_velocity_and_state (
     movement.tick();
     for buffer in player_data.buffers.iter_mut() {
       if buffer.player_id == *player_id {
-        movement.update_action_state(buffer);
-        // Consume Movement Events
-        if let Some(me) = movement.movement_event {
-          match me.event_type {
-            MovementEventType::BACKDASH => movement.execute_backdash(),
-            _ => ()
+        let buffered_attack = movement.attack_to_execute(buffer);
+        if let Some(attack) = buffered_attack {
+          movement.buffer_attack(attack);
+        } else {
+          movement.update_action_state(buffer);
+          if let Some(me) = movement.movement_event {
+            match me.event_type {
+              MovementEventType::BACKDASH => movement.execute_backdash(),
+              _ => ()
+            }
+            movement.clear_movement_event();
           }
-          movement.clear_movement_event();
         }
 
         movement.execute_airdash();
+        movement.execute_attack();
         let new_velocity = match movement.get_action_state() {
           ActionState::Walking => Vec2::new(movement.walk_speed * movement.facing_vector, 0.0),
           ActionState::BackWalking => Vec2::new(-movement.back_walk_speed * movement.facing_vector, 0.0),
