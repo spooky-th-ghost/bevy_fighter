@@ -92,17 +92,9 @@ pub fn determine_player_velocity_and_state (
           movement.buffer_attack(attack);
         } else {
           movement.update_action_state(buffer);
-          if let Some(me) = movement.movement_event {
-            match me.event_type {
-              MovementEventType::BACKDASH => movement.execute_backdash(),
-              _ => ()
-            }
-            movement.clear_movement_event();
-          }
         }
 
-        movement.execute_airdash();
-        movement.execute_attack();
+        movement.manage_state_action();
         let new_velocity = match movement.get_action_state() {
           ActionState::Walking => Vec2::new(movement.walk_speed * movement.facing_vector, 0.0),
           ActionState::BackWalking => Vec2::new(-movement.back_walk_speed * movement.facing_vector, 0.0),
@@ -114,7 +106,6 @@ pub fn determine_player_velocity_and_state (
           _ => movement.velocity.custom_lerp(Vec2::ZERO, 0.5),
         };
         movement.set_velocity(new_velocity);
-        movement.execute_jump();
       }
     }
     if movement.get_should_transition() {
@@ -125,6 +116,49 @@ pub fn determine_player_velocity_and_state (
             transition,
           }
         )
+      }
+    }
+  }
+}
+
+pub fn determine_player_attacks (
+  mut player_data: ResMut<PlayerData>,
+  mut query: Query<(&PlayerId, &mut CharacterMovement)>,
+) {
+  for (player_id, mut movement) in query.iter_mut() {
+    movement.tick();
+    for buffer in player_data.buffers.iter_mut() {
+      if buffer.player_id == *player_id {
+        let buffered_attack = movement.attack_to_execute(buffer);
+        if let Some(attack) = buffered_attack {
+          movement.buffer_attack(attack);
+        }
+      }
+    }
+  }
+}
+
+pub fn determine_player_movement (
+  mut player_data: ResMut<PlayerData>, 
+  mut query: Query<(&PlayerId, &mut CharacterMovement)>,
+) {
+  for (player_id, mut movement) in query.iter_mut() {
+    movement.tick();
+    for buffer in player_data.buffers.iter_mut() {
+      if buffer.player_id == *player_id {
+        let buffered_attack = movement.attack_to_execute(buffer);
+        if let Some(attack) = buffered_attack {
+          movement.buffer_attack(attack);
+        } else {
+          movement.update_action_state(buffer);
+          // if let Some(me) = movement.movement_event {
+          //   match me.event_type {
+          //     MovementEventType::BACKDASH => movement.execute_backdash(),
+          //     _ => ()
+          //   }
+          //   movement.clear_movement_event();
+          // }
+        }
       }
     }
   }

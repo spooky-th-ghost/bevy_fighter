@@ -47,7 +47,6 @@ pub struct CharacterMovement {
   pub action_state: ActionState,
   pub previous_action_state: ActionState,
   pub facing_vector: f32,
-  pub movement_event: Option<MovementEvent>,
   pub busy: u8,
   pub jumpsquat: u8,
   pub is_grounded: bool,
@@ -100,7 +99,6 @@ impl CharacterMovement {
       max_air_backdash_time: s.max_air_backdash_time,
       backdash: s.backdash,
       facing_vector: 1.0,
-      movement_event: None,
       busy: 0,
       is_grounded: true,
       air_jumps_remaining: s.air_jumps,
@@ -131,10 +129,6 @@ impl CharacterMovement {
     self.busy = busy;
   }
 
-  pub fn clear_movement_event(&mut self) {
-    self.movement_event = None;
-  }
-
   pub fn land(&mut self) {
     self.is_grounded = true;
     self.air_jumps_remaining = self.air_jumps;
@@ -143,7 +137,7 @@ impl CharacterMovement {
     self.airdash_lockout = 0;
   }
 
-  // Getters
+  // Based on the current inputs, find if there is a valid attack to execute
   pub fn find_attack(&mut self, motion: u8, buttons: String) -> Option<Attack> {
     let mut current_regex: Regex;
     for button in buttons.chars().rev() {
@@ -189,17 +183,15 @@ impl CharacterMovement {
       _ => return false,
     }
   }
-
   pub fn calculate_transition(&self) -> Option<AnimationTransition> {
-
     match &self.action_state {
       ActionState::Attacking {duration: _, attack} => return Some(AnimationTransition::Attack{name: attack.name.clone()}),
-      ActionState::Jumpsquat {squat: _, velocity: _} => return Some(AnimationTransition::ToRise),
+      ActionState::Jumpsquat {duration: _, velocity: _} => return Some(AnimationTransition::ToRise),
       ActionState::Walking => return Some(AnimationTransition::ToWalk),
       ActionState::BackWalking => return Some(AnimationTransition::ToBackwalk),
       ActionState::Crouching => return Some(AnimationTransition::ToCrouch),
       ActionState::Dashing => return Some(AnimationTransition::ToDash),
-      ActionState::BackDashing => return Some(AnimationTransition::ToBackdash),
+      ActionState::BackDashing {duration: _} => return Some(AnimationTransition::ToBackdash),
       ActionState::AirDashing {duration: _, velocity: _} => return Some(AnimationTransition::ToAirdash),
       ActionState::AirBackDashing {duration: _, velocity: _} => return Some(AnimationTransition::ToAirBackdash),
       ActionState::Airborne => {
@@ -212,7 +204,7 @@ impl CharacterMovement {
       ActionState::Standing => {
         match self.previous_action_state {
           ActionState::Dashing => return Some(AnimationTransition::DashToIdle),
-          ActionState::BackDashing =>  return Some(AnimationTransition::BackDashToIdle),
+          ActionState::BackDashing {duration: _} =>  return Some(AnimationTransition::BackDashToIdle),
           ActionState::Walking => return Some(AnimationTransition::WalkToIdle),
           ActionState::BackWalking => return Some(AnimationTransition::BackwalkToIdle),
           ActionState::Crouching => return Some(AnimationTransition::CrouchToIdle),
@@ -267,9 +259,10 @@ impl CharacterMovement {
                 buffer.consume_motion();
               },
               CommandType::BACK_DASH => {
-                self.action_state = ActionState::BackDashing;
-                self.movement_event = Some(MovementEvent::new(MovementEventType::BACKDASH, buffer.current_motion));
-                buffer.consume_motion();
+                self.buffer_backdash();
+                // self.action_state = ActionState::BackDashing {duration: self.backdash.get_duration()};
+                // self.movement_event = Some(MovementEvent::new(MovementEventType::BACKDASH, buffer.current_motion));
+                // buffer.consume_motion();
               },
               _ => ()
             }               
@@ -327,7 +320,7 @@ impl CharacterMovement {
 
   pub fn buffer_attack(&mut self, attack: Attack) {
     self.action_state = ActionState::Attacking {duration: attack.busy, attack: attack.clone()};
-    self.busy = attack.busy + 1;
+    self.busy = attack.busy;
   }
 
   pub fn buffer_jump(&mut self, motion: u8, superjump: bool, dashing: bool, airborne: bool) {
@@ -372,10 +365,28 @@ impl CharacterMovement {
       }
     };
     self.action_state = if airborne {
-      ActionState::AirJumpsquat { squat, velocity}
+      ActionState::AirJumpsquat {duration: squat, velocity}
     } else {
-      ActionState::Jumpsquat {squat, velocity}
+      ActionState::Jumpsquat {duration: squat, velocity}
     };
+  }
+
+  pub fn get_hitbox_events_this_frame(&self) -> Option<Vec<HitboxEvent>> {
+    if let ActionState::Attacking{duration, attack} = self.action_state.clone() {
+      let mut events = Vec::new();
+      for e in attack.hitbox_events.iter() {
+        if e.frame == duration {
+          events.push(e.clone());
+        }
+      }
+      if events.len() != 0 {
+        return Some(events);
+      } else {
+        return None;
+      }
+    } else {
+      return None;
+    }
   }
 
   pub fn buffer_airdash(&mut self, forward: bool) {
@@ -392,27 +403,23 @@ impl CharacterMovement {
     }
   }
 
-  pub fn execute_jump(&mut self) {
-    if self.action_state.is_finished_jumping() {
-      self.is_grounded = false;
-      self.velocity = self.action_state.get_jump_velocity();
-      self.action_state = ActionState::Airborne;
+  pub fn manage_state_action(&mut self) {
+    if self.action_state.has_finished() {
+      match self.action_state {
+        ActionState::AirDashing {duration:_, velocity: _} | ActionState::AirBackDashing {duration: _, velocity: _} => {self.action_state = ActionState::Airborne},
+        ActionState::Attacking {duration: _, attack: _} => {self.action_state = ActionState::Standing},
+        ActionState::BackDashing {duration: _} => {self.action_state = self.backdash.ending_state()},
+        ActionState::Jumpsquat {duration:_ , velocity: _} => {
+          self.is_grounded = false;
+          self.velocity = self.action_state.get_jump_velocity();
+          self.action_state = ActionState::Airborne;
+        }
+        _ => ()
+      }
     }
   }
 
-  pub fn execute_airdash(&mut self) {
-    if self.action_state.is_finished_airdashing() {
-      self.action_state = ActionState::Airborne;
-    }
-  }
-
-  pub fn execute_attack(&mut self) {
-    if self.action_state.is_finished_attacking() {
-      self.action_state = ActionState::Standing;
-    }
-  }
-
-  pub fn execute_backdash(&mut self) {
+  pub fn buffer_backdash(&mut self) {
     match self.backdash {
       Backdash::Standard {speed, busy, motion_duration} => {
         let int_force = InterpolatedForce::new(
@@ -422,6 +429,7 @@ impl CharacterMovement {
         );
         self.set_i_force(int_force);
         self.set_busy(busy);
+        self.action_state = ActionState::BackDashing {duration: busy}
       },
       _ => ()
     }
@@ -439,12 +447,12 @@ pub enum ActionState {
   Blocking,
   CrouchBlocking,
   Crouching,
-  Jumpsquat {squat: u8, velocity: Vec2 },
-  AirJumpsquat {squat: u8, velocity: Vec2 },
+  Jumpsquat {duration: u8, velocity: Vec2 },
+  AirJumpsquat {duration: u8, velocity: Vec2 },
   Airborne,
   Juggle,
   Standing,
-  BackDashing,
+  BackDashing {duration: u8},
   AirDashing {duration: u8, velocity: Vec2},
   AirBackDashing {duration: u8, velocity: Vec2} 
 }
@@ -458,11 +466,11 @@ impl PartialEq for ActionState {
 impl ActionState {
   pub fn tick(&mut self) {
     match self {
-      ActionState::Jumpsquat { squat, velocity: _} => {
-        *squat = countdown(*squat);
+      ActionState::Jumpsquat { duration, velocity: _} => {
+        *duration = countdown(*duration);
       },
-      ActionState::AirJumpsquat { squat, velocity: _} => {
-        *squat = countdown(*squat);
+      ActionState::AirJumpsquat { duration, velocity: _} => {
+        *duration = countdown(*duration);
       },
       ActionState::AirDashing {duration, velocity: _} => {
         *duration = countdown(*duration);
@@ -477,57 +485,41 @@ impl ActionState {
     }
   }
 
-  pub fn is_finished_jumping(&self) -> bool {
+  pub fn has_finished(&self) -> bool {
     match self {
-      ActionState::Jumpsquat{squat, velocity: _} => {
-        if *squat == 0 {
+      ActionState::Jumpsquat{duration, velocity: _} => {
+        if *duration == 0 {
           return true;
-        } else {
-          return false;
         }
       },
-      ActionState::AirJumpsquat{squat, velocity: _} => {
-        if *squat == 0 {
+      ActionState::AirJumpsquat{duration, velocity: _} => {
+        if *duration == 0 {
           return true;
-        } else {
-          return false;
-        }
-      }
-      _ => return false,
-    }
-  }
-
-  pub fn is_finished_airdashing(&self) -> bool {
-    match self {
+        };
+      },
       ActionState::AirDashing {duration, velocity: _} => {
         if *duration == 0 {
           return true;
-        } else {
-          return false;
-        }
+        };
       },
       ActionState::AirBackDashing {duration, velocity: _} => {
         if *duration == 0 {
           return true;
-        } else {
-          return false;
-        }
+        };
       },
-      _ => return false,
-    }
-  }
-
-  pub fn is_finished_attacking(&self) -> bool {
-    match self {
       ActionState::Attacking {duration, attack: _} => {
         if *duration == 0 {
           return true;
-        } else {
-          return false;
-        }
+        };
       },
-      _ => return false,
+      ActionState::BackDashing {duration} => {
+        if *duration == 0 {
+          return true;
+        }
+      }
+      _ => (),
     }
+    return false;
   }
 
   pub fn perform_hitbox_events(&self) {
@@ -541,8 +533,8 @@ impl ActionState {
 
   pub fn get_jump_velocity(&self) -> Vec2{
     match self {
-      ActionState::AirJumpsquat {squat: _, velocity} => *velocity,
-      ActionState::Jumpsquat {squat: _, velocity} => *velocity,
+      ActionState::AirJumpsquat {duration: _, velocity} => *velocity,
+      ActionState::Jumpsquat {duration: _, velocity} => *velocity,
       _ => Vec2::ZERO,
     }
   }
@@ -555,9 +547,27 @@ impl Default for ActionState {
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Backdash {
-  Standard {speed: f32, busy: u8, motion_duration: u8},
-  Teleport { distance: f32, busy: u8, motion_duration: u8},
+  Standard {busy: u8, speed: f32, motion_duration: u8},
+  Teleport {busy: u8, distance: f32, motion_duration: u8},
   Leap {busy: u8, motion_duration: u8}
+}
+
+impl Backdash {
+  pub fn get_duration(&self) -> u8 {
+    match self {
+      Backdash::Standard {busy, speed: _, motion_duration: _} => return *busy,
+      Backdash::Teleport {busy, distance: _, motion_duration: _} => return *busy,
+      Backdash::Leap {busy, motion_duration: _} => return *busy
+    }
+  }
+
+  pub fn ending_state(&self) -> ActionState {
+    match self {
+      Backdash::Standard {busy:_, speed: _, motion_duration: _} => return ActionState::Standing,
+      Backdash::Teleport {busy:_, distance: _, motion_duration: _} => return ActionState::Standing,
+      Backdash::Leap {busy:_, motion_duration: _} => return ActionState::Airborne,
+    }
+  }
 }
 
 #[derive(Debug, Clone, Copy)]

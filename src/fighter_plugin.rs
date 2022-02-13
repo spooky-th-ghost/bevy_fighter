@@ -43,6 +43,16 @@ impl Plugin for FighterPlugin {
             .after(FighterSystemLabels::AnimationUpdate)
         )
         .with_system(
+          manage_hitboxes
+            .label(FighterSystemLabels::HitboxUpdate)
+            .after(FighterSystemLabels::AnimationUpdate)
+        )
+        .with_system(
+          spawn_hitboxes
+            .label(FighterSystemLabels::HitboxCreation)
+            .after(FighterSystemLabels::HitboxUpdate)
+        )
+        .with_system(
           update_debug_ui
             .after(FighterSystemLabels::PhysicsExecute)
         )
