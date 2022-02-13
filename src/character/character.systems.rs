@@ -92,13 +92,6 @@ pub fn determine_player_velocity_and_state (
           movement.buffer_attack(attack);
         } else {
           movement.update_action_state(buffer);
-          // if let Some(me) = movement.movement_event {
-          //   match me.event_type {
-          //     MovementEventType::BACKDASH => movement.execute_backdash(),
-          //     _ => ()
-          //   }
-          //   movement.clear_movement_event();
-          // }
         }
 
         movement.manage_state_action();
@@ -113,7 +106,6 @@ pub fn determine_player_velocity_and_state (
           _ => movement.velocity.custom_lerp(Vec2::ZERO, 0.5),
         };
         movement.set_velocity(new_velocity);
-        //movement.execute_jump();
       }
     }
     if movement.get_should_transition() {

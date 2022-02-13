@@ -64,7 +64,7 @@ pub struct HurtboxEvent {
   size: Vec2,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Component,Debug, Clone, Copy)]
 pub struct Hitbox {
   /// Attack level, effects hit/block stun
   attack_level: u8,
@@ -105,6 +105,14 @@ impl Hitbox {
       hit_state: HitState::None,
       active: false
     }
+  }
+
+  pub fn tick(&mut self) {
+    self.duration = countdown(self.duration);
+  }
+
+  pub fn is_finished(&self) -> bool {
+    return self.duration == 0;
   }
 }
 
@@ -158,4 +166,30 @@ pub struct HitboxSerialized {
   pub duration: u8,
   pub chip: bool,
   pub projectile: bool,
+}
+
+
+pub trait SpawnHitbox {
+  fn spawn_hitbox(&mut self, player_id: &PlayerId, hitbox_event: &HitboxEvent, parent_transform: &Transform, facing_vector: f32);
+}
+
+impl SpawnHitbox for Commands<'_, '_>{
+  fn spawn_hitbox(&mut self, player_id: &PlayerId, hitbox_event: &HitboxEvent, parent_transform: &Transform, facing_vector: f32 ) {
+    let offset = Vec3::new(hitbox_event.position.x * facing_vector, hitbox_event.position.y, 1.0);
+    let parent_translation = parent_transform.translation;
+    let transform = Transform::from_translation(parent_translation + offset);
+
+    self.spawn_bundle( SpriteBundle {
+      sprite: Sprite {
+        color: Color::rgb(0.25, 0.25, 0.75),
+        custom_size: Some(hitbox_event.size),
+        ..Default::default()
+      },
+      transform,
+      ..Default::default()
+      }
+    )
+    .insert(player_id.clone())
+    .insert(hitbox_event.hitbox);
+  }
 }

@@ -20,7 +20,9 @@ pub enum FighterSystemLabels {
     PhysicsUpdate,
     PhysicsExecute,
     AnimationUpdate,
-    AnimationExecute
+    AnimationExecute,
+    HitboxUpdate,
+    HitboxCreation
 }
 
 trait MotionGroups {

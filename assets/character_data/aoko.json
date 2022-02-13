@@ -244,8 +244,8 @@
       "hitbox_events": [
         {
           "hitbox": "5A",
-          "position": {"x":2.0,"y":10.0},
-          "size": {"x": 10.0, "y": 10.0},
+          "position": {"x":30.0,"y":-70.0},
+          "size": {"x": 60.0, "y": 30.0},
           "frame": 4
         }
       ],

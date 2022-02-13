@@ -47,7 +47,6 @@ pub struct CharacterMovement {
   pub action_state: ActionState,
   pub previous_action_state: ActionState,
   pub facing_vector: f32,
-  pub movement_event: Option<MovementEvent>,
   pub busy: u8,
   pub jumpsquat: u8,
   pub is_grounded: bool,
@@ -100,7 +99,6 @@ impl CharacterMovement {
       max_air_backdash_time: s.max_air_backdash_time,
       backdash: s.backdash,
       facing_vector: 1.0,
-      movement_event: None,
       busy: 0,
       is_grounded: true,
       air_jumps_remaining: s.air_jumps,
@@ -131,10 +129,6 @@ impl CharacterMovement {
     self.busy = busy;
   }
 
-  pub fn clear_movement_event(&mut self) {
-    self.movement_event = None;
-  }
-
   pub fn land(&mut self) {
     self.is_grounded = true;
     self.air_jumps_remaining = self.air_jumps;
@@ -143,7 +137,7 @@ impl CharacterMovement {
     self.airdash_lockout = 0;
   }
 
-  // Getters
+  // Based on the current inputs, find if there is a valid attack to execute
   pub fn find_attack(&mut self, motion: u8, buttons: String) -> Option<Attack> {
     let mut current_regex: Regex;
     for button in buttons.chars().rev() {
@@ -189,9 +183,7 @@ impl CharacterMovement {
       _ => return false,
     }
   }
-
   pub fn calculate_transition(&self) -> Option<AnimationTransition> {
-
     match &self.action_state {
       ActionState::Attacking {duration: _, attack} => return Some(AnimationTransition::Attack{name: attack.name.clone()}),
       ActionState::Jumpsquat {duration: _, velocity: _} => return Some(AnimationTransition::ToRise),
@@ -377,6 +369,24 @@ impl CharacterMovement {
     } else {
       ActionState::Jumpsquat {duration: squat, velocity}
     };
+  }
+
+  pub fn get_hitbox_events_this_frame(&self) -> Option<Vec<HitboxEvent>> {
+    if let ActionState::Attacking{duration, attack} = self.action_state.clone() {
+      let mut events = Vec::new();
+      for e in attack.hitbox_events.iter() {
+        if e.frame == duration {
+          events.push(e.clone());
+        }
+      }
+      if events.len() != 0 {
+        return Some(events);
+      } else {
+        return None;
+      }
+    } else {
+      return None;
+    }
   }
 
   pub fn buffer_airdash(&mut self, forward: bool) {
