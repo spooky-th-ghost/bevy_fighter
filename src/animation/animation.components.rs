@@ -1,26 +1,32 @@
 use bevy::prelude::*;
 use regex::Regex;
-use crate::character_library::{
-  AnimationSerialized,
-  CharacterLibrary
-};
-
-use crate::character::{
-  PlayerId
+use crate::{
+  character_library::{
+    AnimationSerialized,
+    CharacterLibrary
+  },
+  character::PlayerId
 };
 
 use std::collections::HashMap;
 
+/// Information on which cells of a sprite sheet should be displayed for the given action
 #[derive(Clone,Copy, PartialEq, Debug)]
 pub struct Animation {
+  /// What frame in the spritesheet does the animation start
   pub first_frame: usize,
+  /// How many frames does the animation take up
   pub length: usize,
+  /// Should the animation loop
   pub loopable: bool,
+  /// Where on the sprite sheet is the final frame located
   pub final_frame: usize,
+  /// How long should each frame of the animation be displayed
   pub hold: u8,
 }
 
 impl Animation {
+  /// Generate an animation from its serialized counterpart
   pub fn from_serialized(s: AnimationSerialized) -> Self {
      let final_frame: usize = s.first_frame + s.length - 1;
     
@@ -33,6 +39,8 @@ impl Animation {
     }
   }
 }
+
+///
 #[derive(Debug, PartialEq)]
 pub enum AnimationState {
   LOOPING,
@@ -73,7 +81,7 @@ pub enum AnimationTransition {
   ToIdle,
   ToAirdash,
   ToAirBackdash,
-  Attack {name: String}
+  ToAttack {name: String},
 }
 
 #[derive(Debug, Component)]
@@ -112,15 +120,16 @@ impl AnimationController {
   }
 
   pub fn get_next_frame(&mut self) -> usize {
+    use AnimationState::*;
     self.current_hold = match self.animation_state {
-      AnimationState::SMEARING => {
+      SMEARING => {
         if let Some(sa) = self.smear_animation {
           sa.hold
         } else {
           2
         }
       },
-      AnimationState::LOOPING => {
+      LOOPING => {
         self.core_animation.hold
       }
     };
@@ -128,15 +137,15 @@ impl AnimationController {
     if self.hold_counter == self.current_hold {
       let mut new_index: usize = self.current_index + 1;
       match self.animation_state {
-        AnimationState::LOOPING => {
+        LOOPING => {
           if new_index > self.core_animation.final_frame {
             new_index = self.core_animation.first_frame;
           }
         },
-        AnimationState::SMEARING => {
+        SMEARING => {
           if let Some(smear) = self.smear_animation {
             if new_index > smear.final_frame {
-              self.animation_state = AnimationState::LOOPING;
+              self.animation_state = LOOPING;
               self.smear_animation = None;
               new_index = self.core_animation.first_frame;
             }
@@ -174,160 +183,67 @@ impl AnimationController {
   }
 
   pub fn transition(&mut self, transition: AnimationTransition) {
+    use AnimationTransition::*;
+
     match transition {
-      AnimationTransition::ToIdle => {
-        self.animation_state = AnimationState::LOOPING;
-        self.smear_animation = None;
-        let core_animation = self.get_animation("idle".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::Attack {name} => {
-        self.animation_state = AnimationState::LOOPING;
-        self.smear_animation = None;
-        let core_animation = self.get_animation(name);
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::ToDash => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("idle<>dash".to_string());
-        let core_animation = self.get_animation("dash".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::ToBackdash => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("idle<>backdash".to_string());
-        let core_animation = self.get_animation("backdash".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::ToRise => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("jumpsquat".to_string());
-        let core_animation = self.get_animation("rise".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::ToWalk => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("idle<>walk".to_string());
-        let core_animation = self.get_animation("walk".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::ToBackwalk => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("idle<>backwalk".to_string());
-        let core_animation = self.get_animation("backwalk".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::ToCrouch => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("idle<>crouch".to_string());
-        let core_animation = self.get_animation("crouch".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::WalkToIdle => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("walk<>idle".to_string());
-        let core_animation = self.get_animation("idle".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::BackwalkToIdle => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("backwalk<>idle".to_string());
-        let core_animation = self.get_animation("idle".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::DashToIdle => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("dash<>idle".to_string());
-        let core_animation = self.get_animation("idle".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::BackDashToIdle => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("backdash<>idle".to_string());
-        let core_animation = self.get_animation("idle".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::ToAirdash => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("fall<>airdash".to_string());
-        let core_animation = self.get_animation("airdash".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::ToAirBackdash => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("fall<>backairdash".to_string());
-        let core_animation = self.get_animation("backairdash".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::RiseToFall => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("rise<>fall".to_string());
-        let core_animation = self.get_animation("fall".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::FallToIdle => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("fall<>idle".to_string());
-        let core_animation = self.get_animation("idle".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::AirdashToFall => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("airdash<>fall".to_string());
-        let core_animation = self.get_animation("fall".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::AirbackdashToFall => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("backairdash<>fall".to_string());
-        let core_animation = self.get_animation("fall".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
-      AnimationTransition::CrouchToIdle => {
-        self.animation_state = AnimationState::SMEARING;
-        self.smear_animation = self.get_animation("crouch<>idle".to_string());
-        let core_animation = self.get_animation("idle".to_string());
-        if let Some(ca) = core_animation {
-          self.core_animation = ca;
-        }
-      },
+      ToIdle => self.loop_animation("idle".into()),
+
+      ToAttack {name} => self.loop_animation(name),
+
+      ToDash => self.smear_animation("idle<>dash".into(), "dash".into()),
+
+      ToBackdash => self.smear_animation("idle<>backdash".into(), "backdash".into()),
+
+      ToRise => self.smear_animation("jumpsquat".into(), "rise".into()),
+
+      ToWalk => self.smear_animation("idle<>walk".into(), "walk".into()),
+
+      ToBackwalk => self.smear_animation("idle<>backwalk".into(), "backwalk".into()),
+
+      ToCrouch => self.smear_animation("idle<>crouch".into(), "crouch".into()),
+
+      WalkToIdle => self.smear_animation("walk<>idle".into(), "idle".into()),
+
+      BackwalkToIdle => self.smear_animation("backwalk<>idle".into(), "idle".into()),
+
+      DashToIdle => self.smear_animation("dash<>idle".into(), "idle".into()),
+
+      BackDashToIdle => self.smear_animation("backdash<>idle".into(), "idle".into()),
+
+      ToAirdash => self.smear_animation("fall<>airdash".into(), "airdash".into()),
+
+      ToAirBackdash => self.smear_animation("fall<>backairdash".into(), "backairdash".into()),
+
+      RiseToFall => self.smear_animation("rise<>fall".into(), "fall".into()),
+
+      FallToIdle => self.smear_animation("fall<>idle".into(), "idle".into()),
+
+      AirdashToFall => self.smear_animation("airdash<>fall".into(), "fall".into()),
+
+      AirbackdashToFall => self.smear_animation("backairdash<>fall".into(), "fall".into()),
+
+      CrouchToIdle => self.smear_animation("crouch<>idle".into(), "idle".into()),
     }
     self.reset();
   }
+
+  fn update_animation(&mut self, state: AnimationState, smear: Option<String>, core: String) {
+    self.animation_state = state;
+    self.smear_animation = smear.map(|s| self.get_animation(s).unwrap());
+    let core_animation = self.get_animation(core);
+
+    if let Some(ca) = core_animation {
+      self.core_animation = ca;
+    }
+  }
+  
+  fn loop_animation(&mut self, animation: String) {
+    self.update_animation(AnimationState::LOOPING, None, animation);
+  }
+
+  fn smear_animation(&mut self, smear_animation: String, core_animation: String) {
+    self.update_animation(AnimationState::SMEARING, Some(smear_animation), core_animation);
+  }
 }
+
+

@@ -63,6 +63,7 @@ impl BeatChain {
   }
 }
 
+/// Component holding
 #[derive(Component, Clone, Debug)]
 pub struct CharacterMovement {
   pub action_state: ActionState,
@@ -206,7 +207,7 @@ impl CharacterMovement {
   }
   pub fn calculate_transition(&self) -> Option<AnimationTransition> {
     match &self.action_state {
-      ActionState::Attacking {duration: _, attack} => return Some(AnimationTransition::Attack{name: attack.name.clone()}),
+      ActionState::Attacking {duration: _, attack} => return Some(AnimationTransition::ToAttack{name: attack.name.clone()}),
       ActionState::Jumpsquat {duration: _, velocity: _} => return Some(AnimationTransition::ToRise),
       ActionState::Walking => return Some(AnimationTransition::ToWalk),
       ActionState::BackWalking => return Some(AnimationTransition::ToBackwalk),
