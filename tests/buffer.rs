@@ -1,4 +1,6 @@
-use bevy_fighter::prelude::*;
+use bevy_fighter::{
+    constants::MOTIONS
+};
 
 
 #[test]

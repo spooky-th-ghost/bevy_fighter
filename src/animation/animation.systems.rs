@@ -1,4 +1,11 @@
-pub use crate::prelude::*;
+use bevy::prelude::*;
+use crate::{
+  animation::{
+    AnimationController,
+    AnimationTransitionEvent
+  },
+  character::PlayerId
+};
 
 pub fn read_animation_transitions(
   mut query: Query<(&PlayerId, &mut AnimationController)>,

@@ -1,3 +1,4 @@
+use bevy::prelude::*;
 use bevy_fighter::prelude::*;
 
 fn main() {

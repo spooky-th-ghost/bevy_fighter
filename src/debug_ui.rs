@@ -1,4 +1,9 @@
-use crate::prelude::*;
+use bevy::prelude::*;
+use crate::{
+    character::{
+        PlayerId
+    }
+};
 
 pub trait SpawnDebugUi {
   fn spawn_debug_ui(&mut self, player_id: PlayerId,  font: &Handle<Font>);

@@ -1,5 +1,5 @@
 use lerp::Lerp;
-pub use crate::prelude::*;
+use bevy::prelude::*;
 
 pub trait CustomLerp {
   fn custom_lerp(&self, target: Self, t: f32) -> Self;
