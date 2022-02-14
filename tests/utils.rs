@@ -1,4 +1,4 @@
-use bevy_fighter::prelude::*;
+use bevy_fighter::utils::*;
 
 #[test]
 fn countdown_from_0() {

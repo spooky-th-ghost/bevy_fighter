@@ -1,6 +1,14 @@
-use crate::prelude::CharacterMovement;
-
-use crate::prelude::*;
+use bevy::prelude::*;
+use crate::{
+  character::{
+    CharacterMovement,
+    PlayerId
+  },
+  attacks::{
+    Hitbox,
+    SpawnHitbox
+  }
+};
 
 pub fn spawn_hitboxes(
   mut coms: Commands,

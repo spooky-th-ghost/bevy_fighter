@@ -1,4 +1,10 @@
-use crate::prelude::*;
+use bevy::prelude::*;
+use crate::{
+  inputs::FighterInputBuffer,
+  character::{
+    PlayerId
+  }
+};
 
 pub struct FighterCharacterPosition {
   pub player_id: PlayerId,

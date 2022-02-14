@@ -1,4 +1,10 @@
-pub use crate::prelude::*;
+use regex::Regex;
+use crate::{
+  inputs::{
+    CommandMotion,
+    CommandType
+  }
+};
 
 lazy_static! {
   pub static ref MOTIONS: [CommandMotion; 8] = [

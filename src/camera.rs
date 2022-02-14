@@ -1,5 +1,6 @@
-pub use crate::prelude::*;
+use bevy::prelude::*;
 use lerp::Lerp;
+use crate::inputs::PlayerData;
 
 #[derive(Component)]
 pub struct CameraController {
