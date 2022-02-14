@@ -27,6 +27,12 @@ pub enum PlayerId {
   P2
 }
 
+impl Default for PlayerId {
+  fn default() -> Self {
+    PlayerId::P1
+  }
+}
+
 #[derive(Serialize,Deserialize)]
 pub struct CharacterMovementSerialized {
   pub jumpsquat: u8,
@@ -44,7 +50,7 @@ pub struct CharacterMovementSerialized {
   pub backdash: Backdash
 }
 
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, Debug, Default)]
 pub struct BeatChain {
   pub all_attacks: Vec<String>,
   pub available_attacks: Vec<String>,
@@ -572,6 +578,12 @@ pub enum Backdash {
   Standard {busy: u8, speed: f32, motion_duration: u8},
   Teleport {busy: u8, distance: f32, motion_duration: u8},
   Leap {busy: u8, motion_duration: u8}
+}
+
+impl Default for Backdash {
+  fn default() -> Self {
+    Backdash::Standard{busy: 0, speed: 0.0, motion_duration: 0}
+  }
 }
 
 impl Backdash {

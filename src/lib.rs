@@ -1,40 +1,39 @@
 #![allow(non_camel_case_types,clippy::needless_return, dead_code)]
 #[macro_use]
-pub extern crate lazy_static;
+extern crate lazy_static;
 
-mod inputs;
-mod attacks;
-mod movement;
+/// Parsing inputs, mapping input devices
+pub mod inputs;
+pub mod attacks;
+pub mod movement;
 pub mod constants;
 pub mod utils;
-mod animation;
-mod collision;
-mod character;
-mod debug_ui;
-mod camera;
-mod character_library;
+pub mod animation;
+pub mod collision;
+pub mod character;
+pub mod debug_ui;
+pub mod camera;
+pub mod character_library;
 
-pub use bevy::{
+use bevy::{
   prelude::*,
    diagnostic::{
-      Diagnostics,
       FrameTimeDiagnosticsPlugin, 
-      LogDiagnosticsPlugin
     },
   core::FixedTimestep,
 };
 
-pub use crate::inputs::*;
-pub use crate::movement::*;
-pub use crate::constants::*;
-pub use crate::utils::*;
-pub use crate::animation::*;
-pub use crate::collision::*;
-pub use crate::character::*;
-pub use crate::debug_ui::*;
-pub use crate::attacks::*;
-pub use crate::camera::*;
-pub use crate::character_library::*;
+use crate::inputs::*;
+use crate::movement::*;
+
+use crate::utils::*;
+use crate::animation::*;
+
+use crate::character::*;
+
+use crate::attacks::*;
+
+use crate::character_library::*;
 
 /// Core plugin, handles deserializing data, collision, animation, and physics
 pub struct FighterPlugin;

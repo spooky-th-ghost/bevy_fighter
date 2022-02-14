@@ -11,7 +11,7 @@ use crate::{
 use std::collections::HashMap;
 
 /// Information on which cells of a sprite sheet should be displayed for the given action
-#[derive(Clone,Copy, PartialEq, Debug)]
+#[derive(Clone,Copy, PartialEq, Debug, Default)]
 pub struct Animation {
   /// What frame in the spritesheet does the animation start
   pub first_frame: usize,
@@ -45,6 +45,12 @@ impl Animation {
 pub enum AnimationState {
   LOOPING,
   SMEARING,
+}
+
+impl Default for AnimationState {
+  fn default() -> Self {
+    AnimationState::LOOPING
+  }
 }
 
 pub struct AnimationTransitionEvent {
@@ -84,7 +90,7 @@ pub enum AnimationTransition {
   ToAttack {name: String},
 }
 
-#[derive(Debug, Component)]
+#[derive(Debug, Component, Default)]
 pub struct AnimationController {
   character_prefix: String,
   animation_state: AnimationState,
@@ -246,4 +252,23 @@ impl AnimationController {
   }
 }
 
+pub fn read_animation_transitions(
+  mut query: Query<(&PlayerId, &mut AnimationController)>,
+  mut transition_reader: EventReader<AnimationTransitionEvent>,
+) {
+  for event in transition_reader.iter() {
+    for (player_id, mut controller) in query.iter_mut() {
+      if event.player_id == *player_id {
+        controller.transition(event.transition.clone());
+      }
+    }
+  }
+}
 
+pub fn animate_sprite_system(
+    mut query: Query<(&mut TextureAtlasSprite, &mut AnimationController)>,
+) {
+  for (mut sprite, mut anim_controller) in query.iter_mut() {
+    sprite.index = anim_controller.get_next_frame();
+  }
+}

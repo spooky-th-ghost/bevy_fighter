@@ -3,6 +3,7 @@ use regex::Regex;
 use std::collections::HashMap;
 
 use crate::{
+  character_library::CharacterLibrary,
   attacks::Attack,
   inputs::{
     FighterInputBuffer,
@@ -10,10 +11,13 @@ use crate::{
     CommandType
   },
   utils::countdown,
-  physics::InterpolatedForce,
+  physics::{
+    InterpolatedForce,
+    CustomLerp
+  },
   animation::{
     AnimationTransitionEvent,
-    AnimationTransition
+    AnimationTransition, AnimationController
   }
 };
 
@@ -29,24 +33,73 @@ pub enum CharacterState {
   Idle,
   Walking,
   BackWalking,
-  Attacking {duration: u8, attack: Attack, cancellable: bool},
-  AttackingAirborne {duration: u8, attack: Attack},
+  Attacking {
+    ///The number of frames until the action completes naturally
+    duration: u8,
+    ///The current attack being executed 
+    attack: Attack,
+    ///Can the current attack me cancelled prematurely 
+    cancellable: bool
+  },
+  AttackingAirborne {
+    ///The number of frames until the action completes naturally
+    duration: u8, 
+    ///The current attack being executed 
+    attack: Attack,
+    ///Can the current attack me cancelled prematurely 
+    cancellable: bool
+  },
   Crouching,
-  Jumpsquat {duration: u8, velocity: Vec2 },
-  AirJumpsquat {duration: u8, velocity: Vec2 },
-  Rising {busy: u8},
+  Jumpsquat {
+    ///The number of frames until the action completes naturally
+    duration: u8,
+    ///The Velocity of the buffered jump 
+    velocity: Vec2 
+  },
+  AirJumpsquat {
+    ///The number of frames until the action completes naturally
+    duration: u8,
+    ///The velocity of the buffered jump  
+    velocity: Vec2 
+  },
+  Rising {
+    ///The number of frames until the player can act out of the state
+    busy: u8
+  },
   Falling,
   Juggle,
-  Standing,
   Dashing,
-  BackDashing {duration: u8},
-  AirDashing {busy: u8, duration: u8, velocity: Vec2},
-  AirBackDashing {busy: u8, duration: u8, velocity: Vec2} 
+  BackDashing {
+    ///The number of frames until the action completes naturally
+    duration: u8
+  },
+  AirDashing {
+    ///The number of frames until the player can act out of the state
+    busy: u8,
+    ///The number of frames until the action completes naturally
+    duration: u8,
+    ///The velocity of the air dash 
+    velocity: Vec2
+  },
+  AirBackDashing {
+    ///The number of frames until the player can act out of the state
+    busy: u8,
+    ///The number of frames until the action completes naturally 
+    duration: u8,
+    ///The velocity of the air dash
+    velocity: Vec2
+  } 
 }
 
 impl PartialEq for CharacterState {
   fn eq(&self, other: &Self) -> bool {
     std::mem::discriminant(self) == std::mem::discriminant(other)
+  }
+}
+
+impl Default for CharacterState {
+  fn default() -> Self {
+    CharacterState::Idle
   }
 }
 
@@ -78,7 +131,7 @@ impl CharacterState {
       Idle | Walking | BackWalking | Crouching => self.from_neutral_states(buffer, stats),
       Dashing => self.from_dashing(buffer, stats),
       Jumpsquat { duration:_,velocity:_ } => self.from_jump_squat(stats),
-      Rising { busy: _ } | Falling => self.from_airborne(buffer, stats),
+      Rising { busy: _ } | Falling => self.from_neutral_airborne(buffer, stats),
       BackDashing { duration:_ } => self.from_backdashing(buffer, stats),
       Attacking {duration:_, attack:_, cancellable:_} => self.from_attacking(buffer, stats),
       _ => self.clone()
@@ -166,7 +219,7 @@ impl CharacterState {
   ///  - Falling
   ///  - Airdashing
   ///  - Airbackdashing
-  pub fn from_airborne(&self, buffer: &FighterInputBuffer, stats: &mut CharacterStats) -> Self {
+  pub fn from_neutral_airborne(&self, buffer: &FighterInputBuffer, stats: &mut CharacterStats) -> Self {
     use CharacterState::*;
     match self {
       Rising { busy } => {
@@ -354,7 +407,7 @@ pub fn manage_player_velocity (
 
 }
 
-#[derive(Component, Clone, Debug)]
+#[derive(Component, Clone, Debug, Default)]
 pub struct CharacterStats {
   pub jumpsquat: u8,
   pub air_jumps: u8,
@@ -378,6 +431,19 @@ pub struct CharacterStats {
 }
 
 impl CharacterStats {
+  pub fn determine_velocity(&mut self, state: &CharacterState) {
+    use CharacterState::*;
+    self.velocity = match state {
+      Walking => Vec2::X * self.facing_vector * self.walk_speed,
+      BackWalking => Vec2::X * self.facing_vector * self.walk_speed,
+      Rising {busy:_} | Falling | Juggle => self.velocity - (Vec2::Y * self.gravity),
+      Dashing => Vec2::X * self.facing_vector * self.dash_speed,
+      BackDashing {duration:_} => Vec2::ZERO,
+      AirDashing {busy:_, duration:_, velocity} => *velocity,
+      AirBackDashing {busy:_, duration:_, velocity} => *velocity,
+      _ => self.velocity.custom_lerp(Vec2::ZERO, 0.5)
+    }
+  }
   pub fn attack_to_execute(&mut self,  buffer: &FighterInputBuffer, airborne: bool) -> Option<Attack> {
     if buffer.current_press.any_pressed() {
       return self.find_attack(buffer.current_motion, buffer.current_press.to_string());
@@ -409,3 +475,37 @@ pub struct CharacterPhysics {
   velocity: Vec2,
   interpolated_force: InterpolatedForce,
 }
+
+#[derive(Bundle, Default)]
+pub struct FighterCharacterBundle {
+  pub sprite: TextureAtlasSprite,
+  pub texture_atlas: Handle<TextureAtlas>,
+  pub transform: Transform,
+  pub global_transform: GlobalTransform,
+  pub visibility: Visibility,
+  pub player_id: PlayerId,
+  pub state: CharacterState,
+  pub movement: CharacterStats,
+  pub animation_controller: AnimationController
+}
+
+// impl FighterCharacterBundle {
+//   pub fn new(player_id: PlayerId, character_prefix: &str, library: &CharacterLibrary) -> Self {
+//     let transform = match player_id {
+//       PlayerId::P1 => Transform::from_xyz(-40.0,0.0,0.0),
+//       PlayerId::P2 => Transform::from_xyz(40.0,0.0,0.0),
+//     };
+
+//     let movement = library.get_movement(character_prefix).unwrap();
+//     let texture_atlas = library.get_atlas(character_prefix).unwrap();
+    
+//     FighterCharacterBundle {
+//       movement,
+//       texture_atlas,
+//       transform,
+//       player_id,
+//       animation_controller: AnimationController::new(character_prefix, library),
+//       ..Default::default()
+//     }
+//   }
+// }

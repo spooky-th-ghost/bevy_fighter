@@ -1,11 +1,13 @@
 #[path ="character.components.rs"]
-mod character_components;
+pub mod character_components;
 
 #[path = "character.systems.rs"]
-mod character_systems;
+pub mod character_systems;
 
-mod state;
-
+pub mod state;
+#[doc(hidden)]
 pub use character_components::*;
+#[doc(hidden)]
 pub use character_systems::*;
+#[doc(hidden)]
 pub use state::*;
