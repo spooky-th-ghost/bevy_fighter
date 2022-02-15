@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use crate::{
   character::{
     CharacterMovement,
+    CharacterState,
     PlayerId
   },
   attacks::{
@@ -14,10 +15,10 @@ use crate::{
 /// Find which hitboxes should be created each frame and create them
 pub fn spawn_hitboxes(
   mut coms: Commands,
-  query: Query<(&PlayerId, &CharacterMovement, &Transform)>,
+  query: Query<(&PlayerId, &CharacterState, &CharacterMovement, &Transform)>,
 ) {
-  for (player_id, movement, transform) in query.iter() {
-    if let Some(hitbox_events) = movement.get_hitbox_events_this_frame() {
+  for (player_id, state, movement, transform) in query.iter() {
+    if let Some(hitbox_events) = state.get_hitbox_events_this_frame() {
       for he in hitbox_events.iter() {
         coms.spawn_hitbox(
           player_id,

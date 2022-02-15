@@ -246,7 +246,7 @@
           "hitbox": "5A",
           "position": {"x":30.0,"y":-70.0},
           "size": {"x": 60.0, "y": 30.0},
-          "frame": 4
+          "frame": 12
         }
       ],
       "busy": 13

@@ -1,10 +1,18 @@
-use bevy::prelude::*;
+use bevy::{
+  diagnostic::{
+    Diagnostics,
+    FrameTimeDiagnosticsPlugin
+  },
+  prelude::*
+};
 use regex::Regex;
 use std::collections::HashMap;
-
+use serde::{Deserialize, Serialize};
 use crate::{
   character_library::CharacterLibrary,
-  attacks::Attack,
+  attacks::{
+    Attack, HitboxEvent
+  },
   inputs::{
     FighterInputBuffer,
     PlayerData,
@@ -19,13 +27,6 @@ use crate::{
     AnimationTransitionEvent,
     AnimationTransition, AnimationController
   }
-};
-
-use super::{
-  Backdash,
-  PlayerId,
-  BeatChain,
-  CharacterMovementSerialized
 };
 
 /// Handles the current state of a character
@@ -112,6 +113,7 @@ impl CharacterState {
       Jumpsquat {duration, velocity:_ } => { *duration = countdown(*duration);},
       AirJumpsquat {duration, velocity: _ } => { *duration = countdown(*duration);},
       BackDashing {duration} => { *duration = countdown(*duration);},
+      Rising {busy} => {*busy = countdown(*busy)},
       AirDashing {busy,duration, velocity:_} => {
         *busy = countdown(*busy); 
         *duration = countdown(*duration);
@@ -135,6 +137,7 @@ impl CharacterState {
       Rising { busy: _ } | Falling => self.from_neutral_airborne(buffer, movement),
       BackDashing { duration:_ } => self.from_backdashing(buffer, movement),
       Attacking {duration:_, attack:_, cancellable:_} => self.from_attacking(buffer, movement),
+      AirDashing { busy:_,duration:_,velocity:_} | AirBackDashing { busy:_,duration:_,velocity:_} => self.from_air_dashing(buffer, movement),
       _ => self.clone()
     };
     let transition = if self.clone() != new_state {
@@ -144,19 +147,6 @@ impl CharacterState {
     };
     *self = new_state;
     return transition;
-  }
-
-  /// Returns whether or not the character is in the air
-  pub fn is_airborne(&self) -> bool {
-    use CharacterState::*;
-    match self {
-      AirJumpsquat {duration:_, velocity:_}
-      | Rising {busy:_}
-      | Falling
-      | AirDashing {busy:_, duration:_, velocity:_}
-      | AirBackDashing {busy:_, duration:_, velocity:_} => return true,
-      _ => return false
-    }
   }
 
   /// Returns a new state based on input from the following states:
@@ -215,6 +205,25 @@ impl CharacterState {
     }
   }
 
+  pub fn from_air_dashing(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
+    use CharacterState::*;
+    match self {
+      AirDashing {busy,duration, velocity:_} => {
+        if *duration == 0 {
+          return self.from_neutral_airborne(buffer, movement);
+        }
+        return self.clone();
+      },
+      AirBackDashing {busy,duration, velocity:_} => {
+        if *duration == 0 {
+          return self.from_neutral_airborne(buffer, movement);
+        }
+        return self.clone();
+      },
+      _ => return self.clone(),
+    }
+  }
+
   /// Returns a new state based on input from the following states:
   ///  - Rising
   ///  - Falling
@@ -230,9 +239,9 @@ impl CharacterState {
           return self.clone();
         }
       },
-      Falling => {
+      Falling | AirDashing {busy:_,duration:_,velocity:_} |  AirBackDashing {busy:_,duration:_,velocity:_} => {
         return self.from_airborne_input(buffer, movement);
-      }
+      },
       _ => return self.clone(),
     };
   }
@@ -267,19 +276,51 @@ impl CharacterState {
 
   // Returns a new state from input while aireborne
   pub fn from_airborne_input (&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
+    use CharacterState::*;
     if let Some(attack) = movement.attack_to_execute(buffer, true) {
       return self.buffer_attack(attack);
     }
 
-    if let Some(ct) = buffer.command_type {
-      match ct {
-        CommandType::DASH => return self.buffer_airdash(movement, true),
-        CommandType::BACK_DASH => return self.buffer_airdash(movement, false),
-      _ => ()
-      }               
+    if movement.can_airdash() {
+      if let Some(ct) = buffer.command_type {
+        match ct {
+          CommandType::DASH => {
+            movement.spend_airdash();
+            return self.buffer_airdash(movement, true)
+          },
+          CommandType::BACK_DASH => {
+            movement.spend_airdash();
+            return self.buffer_airdash(movement, false)
+          },
+        _ => ()
+        }               
+      }
     }
 
-    return self.clone();
+    return match self {
+      AirDashing {busy:_, duration:_,velocity:_} => {
+        if self.is_finished_airdashing() {
+          Falling
+        } else {
+          self.clone()
+        }
+      },
+      AirBackDashing {busy:_, duration:_,velocity:_} => {
+        if self.is_finished_airdashing() {
+          Falling
+        } else {
+          self.clone()
+        }
+      },
+      Rising {busy:_} => {
+        if movement.is_falling() {
+          Falling
+        } else {
+          self.clone()
+        }
+      }
+      _ => self.clone()
+    }
   }
 
   /// Returns an attacking state, with the passed attack
@@ -354,6 +395,7 @@ impl CharacterState {
     use CharacterState::*;
     use AnimationTransition::*;
     match (self, other) {
+      (Rising {busy:_}, Falling) => Some(RiseToFall),
       (Crouching,Idle) => Some(CrouchToIdle),
       (Falling,Idle) => Some(FallToIdle),
       (Walking,Idle) => Some(WalkToIdle),
@@ -374,6 +416,76 @@ impl CharacterState {
       (_, Attacking {duration:_, attack, cancellable:_}) => Some(ToAttack {name: attack.name.clone()}),
       (_,_) => None
     }
+  }
+
+  pub fn get_hitbox_events_this_frame(&self) -> Option<Vec<HitboxEvent>> {
+    use CharacterState::*;
+    if let Attacking{duration, attack, cancellable} = self.clone() {
+      let mut events = Vec::new();
+      for e in attack.hitbox_events.iter() {
+        if (attack.busy as i8 - e.frame as i8) == duration as i8 {
+          events.push(e.clone());
+        }
+      }
+      if events.len() != 0 {
+        return Some(events);
+      } else {
+        return None;
+      }
+    } else {
+      return None;
+    }
+  }
+
+  /// Returns whether or not the character can turn around, based on current state
+  pub fn get_can_turn(&self) -> bool {
+    use CharacterState::*;
+    match self {
+      Idle
+      | Walking
+      | BackWalking
+      | Crouching
+      | Rising {busy:_}
+      | Falling => return true,
+      _ => return false
+    }
+  }
+
+  /// Returns whether or not the character is in the air, based on current state
+  pub fn get_airborne(&self) -> bool {
+    use CharacterState::*;
+    match self {
+      AirJumpsquat {duration:_, velocity:_}
+      | Rising {busy:_}
+      | Falling
+      | AirDashing {busy:_, duration:_, velocity:_}
+      | AirBackDashing {busy:_, duration:_, velocity:_} => return true,
+      _ => return false
+    }
+  }
+
+  pub fn is_finished_airdashing(&self) -> bool {
+    use CharacterState::*;
+    match self {
+      AirDashing {busy:_, duration,velocity:_} => return *duration == 0,
+      AirBackDashing {busy:_, duration,velocity:_} => return *duration == 0,
+      _ => return false,
+    }
+  }
+
+  pub fn can_act_out_of_airdash(&self) -> bool {
+    use CharacterState::*;
+    match self {
+      AirDashing {busy, duration:_,velocity:_} => return *busy == 0,
+      AirBackDashing {busy, duration:_,velocity:_} => return *busy == 0,
+      _ => return false,
+    }
+  }
+
+  /// Called when the character lands, forcing them into a Idle state
+  pub fn land(&mut self) {
+    use CharacterState::*;
+    *self = Idle;
   }
 }
 
@@ -400,6 +512,7 @@ pub struct CharacterMovement {
   pub facing_vector: f32,
   pub velocity: Vec2,
   pub interpolated_force: Option<InterpolatedForce>,
+  pub can_turn: bool,
 }
 
 impl CharacterMovement {
@@ -437,13 +550,14 @@ impl CharacterMovement {
       interpolated_force: None,
       attacks,
       beat_chain: BeatChain::from_attack_names(attack_names),
+      can_turn: true,
     }
   }
   pub fn determine_velocity(&mut self, state: &CharacterState) {
     use CharacterState::*;
     self.velocity = match state {
       Walking => Vec2::X * self.facing_vector * self.walk_speed,
-      BackWalking => Vec2::X * self.facing_vector * self.walk_speed,
+      BackWalking => Vec2::X * -self.facing_vector * self.walk_speed,
       Rising {busy:_} | Falling | Juggle => self.velocity - (Vec2::Y * self.gravity),
       Dashing => Vec2::X * self.facing_vector * self.dash_speed,
       BackDashing {duration:_} => Vec2::ZERO,
@@ -452,12 +566,35 @@ impl CharacterMovement {
       _ => self.velocity.custom_lerp(Vec2::ZERO, 0.5)
     }
   }
+
+  pub fn get_target_velo(&mut self) -> Vec2 {
+    if let Some(i_force) = self.interpolated_force.as_mut() {
+      let i_force_velo = i_force.update();
+      if i_force.is_finished() {self.interpolated_force = None;}
+      return i_force_velo;
+    } else {
+      return self.velocity;
+    }
+  }
+
+  pub fn is_falling(&self) -> bool {
+    return self.velocity.y < 0.0;
+  }
+
   pub fn attack_to_execute(&mut self,  buffer: &FighterInputBuffer, airborne: bool) -> Option<Attack> {
     if buffer.current_press.any_pressed() {
       return self.find_attack(buffer.current_motion, buffer.current_press.to_string());
     } else {
       return None;
     }
+  }
+
+  pub fn can_airdash(&self) -> bool {
+    return self.airdashes_remaining > 0;
+  }
+
+  pub fn spend_airdash(&mut self) {
+    self.airdashes_remaining = countdown(self.airdashes_remaining);
   }
 
   pub fn find_attack(&mut self, motion: u8, buttons: String) -> Option<Attack> {
@@ -473,8 +610,84 @@ impl CharacterMovement {
     return None;
   }
 
+  pub fn land(&mut self) {
+    self.air_jumps_remaining = self.air_jumps;
+    self.airdashes_remaining = self.airdashes;
+  }
+
   pub fn set_interpolated_force(&mut self, i_force: InterpolatedForce) {
     self.interpolated_force = Some(i_force);
+  }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Component)]
+pub enum PlayerId {
+  P1,
+  P2
+}
+
+impl Default for PlayerId {
+  fn default() -> Self {
+    PlayerId::P1
+  }
+}
+
+#[derive(Serialize,Deserialize)]
+pub struct CharacterMovementSerialized {
+  pub jumpsquat: u8,
+  pub air_jumps: u8,
+  pub airdashes: u8,
+  pub air_dash_speed: f32,
+  pub air_back_dash_speed: f32,
+  pub walk_speed: f32,
+  pub back_walk_speed: f32,
+  pub dash_speed: f32,
+  pub gravity: f32,
+  pub jump_height: f32,
+  pub max_airdash_time: u8,
+  pub max_air_backdash_time: u8,
+  pub backdash: Backdash
+}
+
+#[derive(Component, Clone, Debug, Default)]
+pub struct BeatChain {
+  pub all_attacks: Vec<String>,
+  pub available_attacks: Vec<String>,
+}
+
+impl BeatChain {
+  pub fn from_attack_names(attack_names: Vec<String>) -> Self {
+    BeatChain {
+      all_attacks: attack_names.clone(),
+      available_attacks: attack_names.clone()
+    }
+  }
+
+  pub fn reset(&mut self) {
+    self.available_attacks = self.all_attacks.clone();
+  }
+}
+
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub enum Backdash {
+  Standard {busy: u8, speed: f32, motion_duration: u8},
+  Teleport {busy: u8, distance: f32, motion_duration: u8},
+  Leap {busy: u8, motion_duration: u8}
+}
+
+impl Default for Backdash {
+  fn default() -> Self {
+    Backdash::Standard{busy: 0, speed: 0.0, motion_duration: 0}
+  }
+}
+
+impl Backdash {
+  pub fn get_duration(&self) -> u8 {
+    match self {
+      Backdash::Standard {busy, speed: _, motion_duration: _} => return *busy,
+      Backdash::Teleport {busy, distance: _, motion_duration: _} => return *busy,
+      Backdash::Leap {busy, motion_duration: _} => return *busy
+    }
   }
 }
 
@@ -512,8 +725,8 @@ impl FighterCharacterBundle {
   }
 }
 
-// Manage and update ChracterState for all characters based on input
-pub fn manage_player_state(
+/// Manage and update ChracterState for all characters based on input
+pub fn manage_character_state(
   mut player_data: ResMut<PlayerData>, 
   mut query: Query<(&PlayerId, &mut CharacterState, &mut CharacterMovement)>,
   mut transition_writer: EventWriter<AnimationTransitionEvent>,
@@ -536,11 +749,88 @@ pub fn manage_player_state(
 }
 
 /// Manage and update velocity based on player state
-pub fn manage_player_velocity (
-  mut player_data: ResMut<PlayerData>, 
-  mut query: Query<(&PlayerId, &mut CharacterState, &mut CharacterMovement)>,
+pub fn manage_character_velocity (
+  mut query: Query<(&CharacterState, &mut CharacterMovement)>,
 ) {
-  for (player_id, state, movement) in query.iter_mut() {
-    movement.determine_velocity(&state);
+  for(state, mut movement) in query.iter_mut() {
+    movement.determine_velocity(state);
+    movement.can_turn = state.get_can_turn();
   }
 }
+
+/// Apply player velocity
+pub fn apply_character_velocity (
+  mut player_data: ResMut<PlayerData>, 
+  mut query: Query<(&PlayerId, &mut CharacterState, &mut CharacterMovement, &mut Transform, &mut TextureAtlasSprite)>,
+  mut transition_writer: EventWriter<AnimationTransitionEvent>,
+) {
+  for(player_id,mut state, mut movement, mut transform, mut sprite) in query.iter_mut() {
+    let tv = movement.get_target_velo();
+    transform.translation += Vec3::new(tv.x, tv.y, 0.0);
+    if transform.translation.y < 0.0 {
+      transform.translation.y = 0.0;
+      character_landing(&mut state, &mut movement);
+      
+      transition_writer.send(
+        AnimationTransitionEvent {
+          player_id: *player_id,
+          transition: AnimationTransition::FallToIdle
+        }
+      )
+    }
+
+    player_data.set_position(player_id, transform.translation);
+    let facing_vector = player_data.get_facing_vector(player_id);
+    if movement.can_turn {
+      sprite.flip_x = facing_vector < 0.0; 
+      movement.facing_vector = facing_vector;
+    }
+  }
+}
+
+fn character_landing(state: &mut CharacterState, movement: &mut CharacterMovement) {
+  state.land();
+  movement.land();
+} 
+
+pub fn update_debug_ui(
+  mut q: QuerySet<(
+    QueryState<(&mut Text, &PlayerId)>,
+    QueryState<&CharacterMovement>
+  )>,
+  diagnostics: Res<Diagnostics>,
+  player_data: Res<PlayerData>
+) {
+  let distance = player_data.get_distance();
+  let mut player_text: Vec<Vec<String>> = Vec::new();
+  let mut fps = 0.0;
+  if let Some(fps_diagnostic) = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS) {
+      if let Some(fps_avg) = fps_diagnostic.average() {
+          fps = fps_avg;
+      }
+  }
+
+  for movement in q.q1().iter() {
+    let mut my_strings: Vec<String> = Vec::new();  
+    my_strings.push(format!("Airdashes: {:?} \n", movement.airdashes_remaining));
+    my_strings.push(format!("Velocity: {:?} \n", movement.velocity));
+    my_strings.push(format!("Facing Vector: {:?} \n", movement.facing_vector));
+    my_strings.push(format!("FPS: {:.1} \n", fps));
+    my_strings.push(format!("Distance: {:?}", distance));
+    let strings_to_push = my_strings.clone();
+    player_text.push(strings_to_push);
+  }
+
+  for (mut text, player_id) in q.q0().iter_mut() {
+    let index = match player_id {
+      PlayerId::P1 => 0,
+      PlayerId::P2 => 1
+    };
+      text.sections[0].value = player_text[index][0].clone();
+      text.sections[1].value = player_text[index][1].clone();
+      text.sections[2].value = player_text[index][2].clone();
+      text.sections[3].value = player_text[index][3].clone();
+      text.sections[4].value = player_text[index][4].clone();
+  }
+}
+
