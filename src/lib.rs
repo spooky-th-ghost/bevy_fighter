@@ -42,7 +42,6 @@ impl Plugin for FighterPlugin {
   fn build(&self, app: &mut App) {
     app
       .add_event::<FighterInputEvent>()
-      .add_event::<CharacterMovementEvent>()
       .add_event::<AnimationTransitionEvent>()
       .add_plugin(FrameTimeDiagnosticsPlugin)
       .insert_resource(CharacterLibrary::new())
@@ -60,12 +59,17 @@ impl Plugin for FighterPlugin {
             .after(FighterSystemLabels::InputWrite)
         )
         .with_system(
-          determine_player_velocity_and_state
-          .label(FighterSystemLabels::PhysicsUpdate)
+          manage_character_state
+          .label(FighterSystemLabels::StatusUpdate)
           .after(FighterSystemLabels::InputRead)
         )
         .with_system(
-          execute_player_physics
+          manage_character_velocity
+          .label(FighterSystemLabels::PhysicsUpdate)
+          .after(FighterSystemLabels::StatusUpdate)
+        )
+        .with_system(
+          apply_character_velocity
             .label(FighterSystemLabels::PhysicsExecute)
             .after(FighterSystemLabels::PhysicsUpdate)
         )
@@ -102,7 +106,7 @@ pub mod prelude {
     FighterPlugin,
     character::{
       PlayerId,
-      SpawnPlayer
+      FighterCharacterBundle
     },
     utils::FighterSystemLabels,
     camera::{
