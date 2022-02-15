@@ -5,7 +5,7 @@ use crate::animation::{
 };
 use crate::attacks::{Hitbox, Attack, HitboxSerialized, AttackSerialized};
 use crate::character::{
-  CharacterMovement,
+  state::CharacterMovement,
   CharacterMovementSerialized
 };
 use std::{

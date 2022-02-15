@@ -24,7 +24,8 @@ use crate::{
 use super::{
   Backdash,
   PlayerId,
-  BeatChain
+  BeatChain,
+  CharacterMovementSerialized
 };
 
 /// Handles the current state of a character
@@ -122,18 +123,18 @@ impl CharacterState {
       _ => () 
     }
   } 
-  /// updates a character state, advancing it's timers and changing it based on input and character stats
-  pub fn update(&mut self, buffer: &mut FighterInputBuffer, stats: &mut CharacterStats) -> Option<AnimationTransition> {
+  /// updates a character state, advancing it's timers and changing it based on input and character movement
+  pub fn update(&mut self, buffer: &mut FighterInputBuffer, movement: &mut CharacterMovement) -> Option<AnimationTransition> {
     use CharacterState::*;
     self.tick();
     
     let new_state = match self {
-      Idle | Walking | BackWalking | Crouching => self.from_neutral_states(buffer, stats),
-      Dashing => self.from_dashing(buffer, stats),
-      Jumpsquat { duration:_,velocity:_ } => self.from_jump_squat(stats),
-      Rising { busy: _ } | Falling => self.from_neutral_airborne(buffer, stats),
-      BackDashing { duration:_ } => self.from_backdashing(buffer, stats),
-      Attacking {duration:_, attack:_, cancellable:_} => self.from_attacking(buffer, stats),
+      Idle | Walking | BackWalking | Crouching => self.from_neutral_states(buffer, movement),
+      Dashing => self.from_dashing(buffer, movement),
+      Jumpsquat { duration:_,velocity:_ } => self.from_jump_squat(movement),
+      Rising { busy: _ } | Falling => self.from_neutral_airborne(buffer, movement),
+      BackDashing { duration:_ } => self.from_backdashing(buffer, movement),
+      Attacking {duration:_, attack:_, cancellable:_} => self.from_attacking(buffer, movement),
       _ => self.clone()
     };
     let transition = if self.clone() != new_state {
@@ -163,16 +164,16 @@ impl CharacterState {
   ///  - Walking
   ///  - Backwalking
   ///  - Crouching
-  pub fn from_neutral_states(&self, buffer: &FighterInputBuffer, stats: &mut CharacterStats) -> Self {
+  pub fn from_neutral_states(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
     use CharacterState::*;
-    if let Some(attack) = stats.attack_to_execute(buffer, false) {
+    if let Some(attack) = movement.attack_to_execute(buffer, false) {
       return self.buffer_attack(attack);
     }
 
     if let Some(ct) = buffer.command_type {
       match ct {
         CommandType::DASH => return Dashing,
-        CommandType::BACK_DASH => return self.buffer_backdash(stats),
+        CommandType::BACK_DASH => return self.buffer_backdash(movement),
       _ => ()
       }               
     }
@@ -181,19 +182,19 @@ impl CharacterState {
       4 => return BackWalking,
       6 => return Walking,
       1 | 2 | 3 => return Crouching,
-      7 | 8 | 9 => return Self::buffer_jump(buffer.current_motion, &stats.clone(), false),
+      7 | 8 | 9 => return Self::buffer_jump(buffer.current_motion, &movement.clone(), false),
       _ => return Idle
     }
   }
 
   /// Returns a new state based on the current state when in jump squat
-  pub fn from_jump_squat(&self, stats: &mut CharacterStats) -> Self{
+  pub fn from_jump_squat(&self, movement: &mut CharacterMovement) -> Self{
     use CharacterState::*;
     match self {
       Jumpsquat { duration, velocity } => {
         if *duration == 0 {
-          stats.velocity = *velocity;
-          return Rising {busy: stats.jump_lockout};
+          movement.velocity = *velocity;
+          return Rising {busy: movement.jump_lockout};
         } else {
           return self.clone();
         }
@@ -203,13 +204,13 @@ impl CharacterState {
   }
 
   /// Returns a new state based on input from dashing
-  pub fn from_dashing(&self, buffer: &FighterInputBuffer, stats: &CharacterStats) -> Self {
+  pub fn from_dashing(&self, buffer: &FighterInputBuffer, movement: &CharacterMovement) -> Self {
     use CharacterState::*;
     match buffer.current_motion {
       4 => return BackWalking,
       6 => return Dashing,
       1 | 2 | 3 => return Crouching,
-      7 | 8 | 9 => return Self::buffer_dash_jump(buffer.current_motion, stats, false),
+      7 | 8 | 9 => return Self::buffer_dash_jump(buffer.current_motion, movement, false),
       _ => return Idle
     }
   }
@@ -219,30 +220,30 @@ impl CharacterState {
   ///  - Falling
   ///  - Airdashing
   ///  - Airbackdashing
-  pub fn from_neutral_airborne(&self, buffer: &FighterInputBuffer, stats: &mut CharacterStats) -> Self {
+  pub fn from_neutral_airborne(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
     use CharacterState::*;
     match self {
       Rising { busy } => {
         if *busy == 0 {
-          return self.from_airborne_input(buffer, stats);
+          return self.from_airborne_input(buffer, movement);
         } else {
           return self.clone();
         }
       },
       Falling => {
-        return self.from_airborne_input(buffer, stats);
+        return self.from_airborne_input(buffer, movement);
       }
       _ => return self.clone(),
     };
   }
 
   /// Returns a new state based on input and the backdash timer from backdash
-  pub fn from_backdashing(&self, buffer: &FighterInputBuffer, stats: &mut CharacterStats) -> Self {
+  pub fn from_backdashing(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
     use CharacterState::*;
     match self {
       BackDashing {duration} => {
         if *duration == 0 {
-          return self.from_neutral_states(buffer, stats);
+          return self.from_neutral_states(buffer, movement);
         }
         return self.clone();
       },
@@ -251,12 +252,12 @@ impl CharacterState {
   }
 
   /// Returns a new state based on input and the attack timer from attack
-  pub fn from_attacking(&self, buffer: &FighterInputBuffer, stats: &mut CharacterStats) -> Self {
+  pub fn from_attacking(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
     use CharacterState::*;
     match self {
       Attacking {duration, attack:_, cancellable} => {
         if *duration == 0 || *cancellable {
-          return self.from_neutral_states(buffer, stats);
+          return self.from_neutral_states(buffer, movement);
         }
         return self.clone();
       },
@@ -265,15 +266,15 @@ impl CharacterState {
   }
 
   // Returns a new state from input while aireborne
-  pub fn from_airborne_input (&self, buffer: &FighterInputBuffer, stats: &mut CharacterStats) -> Self {
-    if let Some(attack) = stats.attack_to_execute(buffer, true) {
+  pub fn from_airborne_input (&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
+    if let Some(attack) = movement.attack_to_execute(buffer, true) {
       return self.buffer_attack(attack);
     }
 
     if let Some(ct) = buffer.command_type {
       match ct {
-        CommandType::DASH => return self.buffer_airdash(stats, true),
-        CommandType::BACK_DASH => return self.buffer_airdash(stats, false),
+        CommandType::DASH => return self.buffer_airdash(movement, true),
+        CommandType::BACK_DASH => return self.buffer_airdash(movement, false),
       _ => ()
       }               
     }
@@ -286,62 +287,62 @@ impl CharacterState {
     return CharacterState::Attacking {duration: attack.busy, attack: attack.clone(), cancellable: false}
   }
 
-  /// Returns a backdashing state, based on stats
-  fn buffer_backdash(&self, stats: &mut CharacterStats) -> Self {
+  /// Returns a backdashing state, based on movement
+  fn buffer_backdash(&self, movement: &mut CharacterMovement) -> Self {
     use Backdash::*;
-    match stats.backdash {
+    match movement.backdash {
       Standard {speed, busy, motion_duration} => {
         let i_force = InterpolatedForce::new(
-          Vec2::new(-speed * stats.facing_vector, 0.0),
-          Vec2::new(-2.0 * stats.facing_vector, 0.0),
+          Vec2::new(-speed * movement.facing_vector, 0.0),
+          Vec2::new(-2.0 * movement.facing_vector, 0.0),
           motion_duration
         );
-        stats.set_interpolated_force(i_force);
+        movement.set_interpolated_force(i_force);
         return CharacterState::BackDashing {duration: busy}
       },
       _ => return Self::Idle
     }
   }
 
-  fn buffer_airdash(&self, stats: &mut CharacterStats, forward: bool) -> Self {
+  fn buffer_airdash(&self, movement: &mut CharacterMovement, forward: bool) -> Self {
     use CharacterState::*;
     if forward {
-        return AirDashing {busy: 10, duration: stats.max_airdash_time, velocity: Vec2::X * stats.air_dash_speed * stats.facing_vector};
+        return AirDashing {busy: 10, duration: movement.max_airdash_time, velocity: Vec2::X * movement.air_dash_speed * movement.facing_vector};
       } else {
-        return AirBackDashing {busy: 10, duration: stats.max_air_backdash_time, velocity: Vec2::X * stats.air_dash_speed * -stats.facing_vector };
+        return AirBackDashing {busy: 10, duration: movement.max_air_backdash_time, velocity: Vec2::X * movement.air_dash_speed * -movement.facing_vector };
       }
   }
 
-  /// Returns a Jumpsquat state from a Dash state, with a buffered jump based on character stats and input buffer
-  fn buffer_dash_jump(motion: u8, stats: &CharacterStats, superjump: bool) -> Self {
+  /// Returns a Jumpsquat state from a Dash state, with a buffered jump based on character movement and input buffer
+  fn buffer_dash_jump(motion: u8, movement: &CharacterMovement, superjump: bool) -> Self {
     let x_velocity = match motion {
-      7 => stats.facing_vector * (-stats.back_walk_speed),
-      9 => stats.facing_vector * (stats.walk_speed * 2.0),
-      _ => stats.facing_vector * (stats.walk_speed * 0.5)
+      7 => movement.facing_vector * (-movement.back_walk_speed),
+      9 => movement.facing_vector * (movement.walk_speed * 2.0),
+      _ => movement.facing_vector * (movement.walk_speed * 0.5)
     };
 
     let y_velocity = if superjump {
-      stats.jump_height * 1.25
+      movement.jump_height * 1.25
     } else {
-      stats.jump_height
+      movement.jump_height
     };
     
     let velocity = Vec2::new(x_velocity, y_velocity);
     return Self::Jumpsquat {duration: 3, velocity}
   }
 
-  /// Returns a Jumpsquat state from a neutral state, with a buffered jump based on character stats and input buffer
-  fn buffer_jump(motion:u8, stats: &CharacterStats, superjump: bool) -> Self {
+  /// Returns a Jumpsquat state from a neutral state, with a buffered jump based on character movement and input buffer
+  fn buffer_jump(motion:u8, movement: &CharacterMovement, superjump: bool) -> Self {
     let x_velocity = match motion {
-      7 => stats.facing_vector * (-stats.back_walk_speed*1.75),
-      9 => stats.facing_vector * (stats.walk_speed),
+      7 => movement.facing_vector * (-movement.back_walk_speed*1.75),
+      9 => movement.facing_vector * (movement.walk_speed),
       _ => 0.0
     };
 
     let y_velocity = if superjump {
-      stats.jump_height * 1.25
+      movement.jump_height * 1.25
     } else {
-      stats.jump_height
+      movement.jump_height
     };
     
     let velocity = Vec2::new(x_velocity, y_velocity);
@@ -376,42 +377,13 @@ impl CharacterState {
   }
 }
 
-// Manage and update ChracterState for all characters based on input
-pub fn manage_player_state(
-  mut player_data: ResMut<PlayerData>, 
-  mut query: Query<(&PlayerId, &mut CharacterState, &mut CharacterStats)>,
-  mut transition_writer: EventWriter<AnimationTransitionEvent>,
-) {
-  for (player_id, mut state, mut stats) in query.iter_mut() {
-    for buffer in player_data.buffers.iter_mut() {
-      if buffer.player_id == *player_id {
-        let transition = state.update(buffer,&mut stats);
-        if let Some(t) = transition {
-          transition_writer.send(
-      AnimationTransitionEvent {
-              player_id: *player_id,
-              transition: t,
-            }
-          );
-        }
-      }
-    }
-  }
-}
-
-/// Manage and update velocity based on player state
-pub fn manage_player_velocity (
-  mut player_data: ResMut<PlayerData>, 
-  mut query: Query<(&PlayerId, &mut CharacterState, &mut CharacterStats)>,
-) {
-
-}
-
 #[derive(Component, Clone, Debug, Default)]
-pub struct CharacterStats {
+pub struct CharacterMovement {
   pub jumpsquat: u8,
   pub air_jumps: u8,
+  pub air_jumps_remaining: u8,
   pub airdashes: u8,
+  pub airdashes_remaining: u8,
   pub air_dash_speed: f32,
   pub air_back_dash_speed: f32,
   pub jump_lockout: u8,
@@ -430,7 +402,43 @@ pub struct CharacterStats {
   pub interpolated_force: Option<InterpolatedForce>,
 }
 
-impl CharacterStats {
+impl CharacterMovement {
+    pub fn from_serialized(s: CharacterMovementSerialized, library: &CharacterLibrary, character_name: &str) -> Self {
+    let mut attacks = HashMap::new();
+    let mut attack_names = Vec::new();
+    let my_regex = Regex::new(&format!("(^{}.+)", character_name)[..]).unwrap();
+    for (attack_id, attack) in library.read_attacks() {
+      if my_regex.is_match(attack_id) {
+        let trimmed_attack_name = attack_id.replace(character_name, "").replace("_","");
+        attack_names.push(trimmed_attack_name.clone());
+        attacks.insert(trimmed_attack_name.clone(), attack.clone());
+      }
+    }
+
+    CharacterMovement {
+      jumpsquat: s.jumpsquat,
+      jump_lockout: 10,
+      air_jumps: s.air_jumps,
+      airdashes: s.airdashes,
+      air_dash_speed: s.air_dash_speed,
+      air_back_dash_speed: s.air_back_dash_speed,
+      walk_speed: s.walk_speed,
+      back_walk_speed: s.back_walk_speed,
+      dash_speed: s.dash_speed,
+      gravity: s.gravity,
+      jump_height: s.jump_height,
+      max_airdash_time: s.max_airdash_time,
+      max_air_backdash_time: s.max_air_backdash_time,
+      backdash: s.backdash,
+      facing_vector: 1.0,
+      air_jumps_remaining: s.air_jumps,
+      airdashes_remaining: s.airdashes,
+      velocity: Vec2::ZERO,
+      interpolated_force: None,
+      attacks,
+      beat_chain: BeatChain::from_attack_names(attack_names),
+    }
+  }
   pub fn determine_velocity(&mut self, state: &CharacterState) {
     use CharacterState::*;
     self.velocity = match state {
@@ -470,12 +478,6 @@ impl CharacterStats {
   }
 }
 
-#[derive(Component, Clone, Debug)]
-pub struct CharacterPhysics {
-  velocity: Vec2,
-  interpolated_force: InterpolatedForce,
-}
-
 #[derive(Bundle, Default)]
 pub struct FighterCharacterBundle {
   pub sprite: TextureAtlasSprite,
@@ -485,27 +487,60 @@ pub struct FighterCharacterBundle {
   pub visibility: Visibility,
   pub player_id: PlayerId,
   pub state: CharacterState,
-  pub movement: CharacterStats,
+  pub movement: CharacterMovement,
   pub animation_controller: AnimationController
 }
 
-// impl FighterCharacterBundle {
-//   pub fn new(player_id: PlayerId, character_prefix: &str, library: &CharacterLibrary) -> Self {
-//     let transform = match player_id {
-//       PlayerId::P1 => Transform::from_xyz(-40.0,0.0,0.0),
-//       PlayerId::P2 => Transform::from_xyz(40.0,0.0,0.0),
-//     };
+impl FighterCharacterBundle {
+  pub fn new(player_id: PlayerId, character_prefix: &str, library: &CharacterLibrary) -> Self {
+    let transform = match player_id {
+      PlayerId::P1 => Transform::from_xyz(-40.0,0.0,0.0),
+      PlayerId::P2 => Transform::from_xyz(40.0,0.0,0.0),
+    };
 
-//     let movement = library.get_movement(character_prefix).unwrap();
-//     let texture_atlas = library.get_atlas(character_prefix).unwrap();
+    let movement = library.get_movement(character_prefix).unwrap();
+    let texture_atlas = library.get_atlas(character_prefix).unwrap();
     
-//     FighterCharacterBundle {
-//       movement,
-//       texture_atlas,
-//       transform,
-//       player_id,
-//       animation_controller: AnimationController::new(character_prefix, library),
-//       ..Default::default()
-//     }
-//   }
-// }
+    FighterCharacterBundle {
+      movement,
+      texture_atlas,
+      transform,
+      player_id,
+      animation_controller: AnimationController::new(character_prefix, library),
+      ..Default::default()
+    }
+  }
+}
+
+// Manage and update ChracterState for all characters based on input
+pub fn manage_player_state(
+  mut player_data: ResMut<PlayerData>, 
+  mut query: Query<(&PlayerId, &mut CharacterState, &mut CharacterMovement)>,
+  mut transition_writer: EventWriter<AnimationTransitionEvent>,
+) {
+  for (player_id, mut state, mut movement) in query.iter_mut() {
+    for buffer in player_data.buffers.iter_mut() {
+      if buffer.player_id == *player_id {
+        let transition = state.update(buffer,&mut movement);
+        if let Some(t) = transition {
+          transition_writer.send(
+      AnimationTransitionEvent {
+              player_id: *player_id,
+              transition: t,
+            }
+          );
+        }
+      }
+    }
+  }
+}
+
+/// Manage and update velocity based on player state
+pub fn manage_player_velocity (
+  mut player_data: ResMut<PlayerData>, 
+  mut query: Query<(&PlayerId, &mut CharacterState, &mut CharacterMovement)>,
+) {
+  for (player_id, state, movement) in query.iter_mut() {
+    movement.determine_velocity(&state);
+  }
+}
