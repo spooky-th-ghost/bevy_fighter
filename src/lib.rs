@@ -93,10 +93,6 @@ impl Plugin for FighterPlugin {
             .label(FighterSystemLabels::HitboxCreation)
             .after(FighterSystemLabels::HitboxUpdate)
         )
-        .with_system(
-          update_debug_ui
-            .after(FighterSystemLabels::PhysicsExecute)
-        )
       );
   }
 }

@@ -29,8 +29,4 @@ fn setup(
     coms.spawn_bundle(
         FighterCharacterBundle::new(PlayerId::P2,"aoko", &character_library)
     );
-    // coms.spawn_player(PlayerId::P1, "roa", &character_library);
-    // coms.spawn_player(PlayerId::P2,"aoko", &character_library);
-    coms.spawn_debug_ui(PlayerId::P1, &asset_server.load("fonts/Roboto-Black.ttf"));
-    coms.spawn_debug_ui(PlayerId::P2, &asset_server.load("fonts/Roboto-Black.ttf"));
 }
