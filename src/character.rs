@@ -208,13 +208,13 @@ impl CharacterState {
   pub fn from_air_dashing(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
     use CharacterState::*;
     match self {
-      AirDashing {busy,duration, velocity:_} => {
+      AirDashing {busy:_ ,duration, velocity:_} => {
         if *duration == 0 {
           return self.from_neutral_airborne(buffer, movement);
         }
         return self.clone();
       },
-      AirBackDashing {busy,duration, velocity:_} => {
+      AirBackDashing {busy:_,duration, velocity:_} => {
         if *duration == 0 {
           return self.from_neutral_airborne(buffer, movement);
         }
