@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use lerp::Lerp;
 use crate::inputs::PlayerData;
 
+/// Moves and zooms the camera based on player positions
 #[derive(Component)]
 pub struct CameraController {
   pub max_scale: f32,
@@ -46,7 +47,7 @@ impl Default for CameraController {
   }
 }
 
-
+#[doc(hidden)]
 pub fn set_camera_scale(
   mut query: Query<(&mut OrthographicProjection, &mut CameraController, &mut Transform)>,
   player_data: Res<PlayerData>

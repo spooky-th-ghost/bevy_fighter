@@ -4,15 +4,23 @@ extern crate lazy_static;
 
 /// Parsing inputs, mapping input devices
 pub mod inputs;
+/// Handles attack damage, properties, etc.
 pub mod attacks;
-pub mod movement;
+/// Handles lerping physical forces
+pub mod physics;
+/// Any static values that need to be initialized on startup
 pub mod constants;
+/// System labels and various utility functions 
 pub mod utils;
+/// Used for looping animations and handling transitions between animations
 pub mod animation;
+/// Hitbox/hurtbox collision
 pub mod collision;
+/// Character movement and states
 pub mod character;
-pub mod debug_ui;
+/// Camera zoom and movement
 pub mod camera;
+/// Deserializing character attack and animation data
 pub mod character_library;
 
 use bevy::{
@@ -24,7 +32,6 @@ use bevy::{
 };
 
 use crate::inputs::*;
-use crate::movement::*;
 
 use crate::utils::*;
 use crate::animation::*;
@@ -109,7 +116,6 @@ pub mod prelude {
       CameraController,
       set_camera_scale
     },
-    debug_ui::SpawnDebugUi,
     character_library::CharacterLibrary,
   };
 }

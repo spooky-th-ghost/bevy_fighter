@@ -40,7 +40,7 @@ impl Animation {
   }
 }
 
-///
+/// Indicates if the [AnimationController] should loop it's current [Animation]
 #[derive(Debug, PartialEq)]
 pub enum AnimationState {
   LOOPING,
@@ -53,6 +53,7 @@ impl Default for AnimationState {
   }
 }
 
+/// Used to indicate what, if any, transition [Animation] should be played by the [AnimationController]
 pub struct AnimationTransitionEvent {
   pub player_id: PlayerId,
   pub transition: AnimationTransition,
@@ -67,6 +68,7 @@ impl AnimationTransitionEvent {
   }
 }
 
+/// Transition variants used by [AnimationTransitionEvent]
 #[derive(Clone)]
 pub enum AnimationTransition {
   WalkToIdle,
@@ -90,6 +92,7 @@ pub enum AnimationTransition {
   ToAttack {name: String},
 }
 
+/// Handles the sprite animation for a character
 #[derive(Debug, Component, Default)]
 pub struct AnimationController {
   character_prefix: String,
@@ -252,6 +255,7 @@ impl AnimationController {
   }
 }
 
+#[doc(hidden)]
 pub fn read_animation_transitions(
   mut query: Query<(&PlayerId, &mut AnimationController)>,
   mut transition_reader: EventReader<AnimationTransitionEvent>,
@@ -265,6 +269,7 @@ pub fn read_animation_transitions(
   }
 }
 
+#[doc(hidden)]
 pub fn animate_sprite_system(
     mut query: Query<(&mut TextureAtlasSprite, &mut AnimationController)>,
 ) {
