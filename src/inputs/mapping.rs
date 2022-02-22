@@ -24,7 +24,7 @@ impl FighterCharacterPosition {
   }
 
   pub fn get_position(&self) -> Vec3 {
-    return self.position;
+    return self.position.clone();
   }
 }
 
@@ -121,6 +121,14 @@ impl PlayerData {
       PlayerId::P2 => 1,
     };
     self.positions[i].set_position(position);
+  }
+
+  pub fn get_position(&mut self, player_id: &PlayerId) -> Vec3 {
+    let i: usize = match player_id {
+      PlayerId::P1 => 0,
+      PlayerId::P2 => 1,
+    };
+    return self.positions[i].get_position()
   }
 
   pub fn get_distance(&self) -> f32 {

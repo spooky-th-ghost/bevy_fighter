@@ -126,7 +126,7 @@ impl CharacterState {
     }
   } 
   /// updates a character state, advancing it's timers and changing it based on input and character movement
-  pub fn update(&mut self, buffer: &mut FighterInputBuffer, movement: &mut CharacterMovement) -> Option<AnimationTransition> {
+  pub fn update(&mut self, buffer: &mut FighterInputBuffer, movement: &mut CharacterMovement, position: Vec3) -> Option<AnimationTransition> {
     use CharacterState::*;
     self.tick();
     
@@ -134,7 +134,7 @@ impl CharacterState {
       Idle | Walking | BackWalking | Crouching => self.from_neutral_states(buffer, movement),
       Dashing => self.from_dashing(buffer, movement),
       Jumpsquat { duration:_,velocity:_ } => self.from_jump_squat(movement),
-      Rising { busy: _ } | Falling => self.from_neutral_airborne(buffer, movement),
+      Rising { busy: _ } | Falling => self.from_neutral_airborne(buffer, movement, position),
       BackDashing { duration:_ } => self.from_backdashing(buffer, movement),
       Attacking {duration:_, attack:_, cancellable:_} => self.from_attacking(buffer, movement),
       AirDashing { busy:_,duration:_,velocity:_} | AirBackDashing { busy:_,duration:_,velocity:_} => self.from_air_dashing(buffer, movement),
@@ -210,13 +210,13 @@ impl CharacterState {
     match self {
       AirDashing {busy:_ ,duration, velocity:_} => {
         if *duration == 0 {
-          return self.from_neutral_airborne(buffer, movement);
+          return self.from_neutral_airborne(buffer, movement, Vec3::ONE);
         }
         return self.clone();
       },
       AirBackDashing {busy:_,duration, velocity:_} => {
         if *duration == 0 {
-          return self.from_neutral_airborne(buffer, movement);
+          return self.from_neutral_airborne(buffer, movement, Vec3::ONE);
         }
         return self.clone();
       },
@@ -229,8 +229,11 @@ impl CharacterState {
   ///  - Falling
   ///  - Airdashing
   ///  - Airbackdashing
-  pub fn from_neutral_airborne(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
+  pub fn from_neutral_airborne(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement, position: Vec3) -> Self {
     use CharacterState::*;
+    if position.y <= 0.0 {
+      return Idle;
+    }
     match self {
       Rising { busy } => {
         if *busy == 0 {
@@ -396,8 +399,8 @@ impl CharacterState {
     use AnimationTransition::*;
     match (self, other) {
       (Rising {busy:_}, Falling) => Some(RiseToFall),
+      (Falling, Idle) | (Rising {busy:_}, Idle) => Some(FallToIdle),
       (Crouching,Idle) => Some(CrouchToIdle),
-      (Falling,Idle) => Some(FallToIdle),
       (Walking,Idle) => Some(WalkToIdle),
       (BackWalking,Idle) => Some(BackwalkToIdle),
       (Dashing,Idle) => Some(DashToIdle),
@@ -732,9 +735,10 @@ pub fn manage_character_state(
   mut transition_writer: EventWriter<AnimationTransitionEvent>,
 ) {
   for (player_id, mut state, mut movement) in query.iter_mut() {
+    let position = player_data.get_position(player_id);
     for buffer in player_data.buffers.iter_mut() {
       if buffer.player_id == *player_id {
-        let transition = state.update(buffer,&mut movement);
+        let transition = state.update(buffer,&mut movement, position);
         if let Some(t) = transition {
           transition_writer.send(
       AnimationTransitionEvent {
@@ -761,22 +765,13 @@ pub fn manage_character_velocity (
 /// Apply player velocity
 pub fn apply_character_velocity (
   mut player_data: ResMut<PlayerData>, 
-  mut query: Query<(&PlayerId, &mut CharacterState, &mut CharacterMovement, &mut Transform, &mut TextureAtlasSprite)>,
-  mut transition_writer: EventWriter<AnimationTransitionEvent>,
+  mut query: Query<(&PlayerId, &mut CharacterMovement, &mut Transform, &mut TextureAtlasSprite)>,
 ) {
-  for(player_id,mut state, mut movement, mut transform, mut sprite) in query.iter_mut() {
+  for(player_id, mut movement, mut transform, mut sprite) in query.iter_mut() {
     let tv = movement.get_target_velo();
     transform.translation += Vec3::new(tv.x, tv.y, 0.0);
     if transform.translation.y < 0.0 {
       transform.translation.y = 0.0;
-      character_landing(&mut state, &mut movement);
-      
-      transition_writer.send(
-        AnimationTransitionEvent {
-          player_id: *player_id,
-          transition: AnimationTransition::FallToIdle
-        }
-      )
     }
 
     player_data.set_position(player_id, transform.translation);

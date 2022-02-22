@@ -14,7 +14,6 @@ fn main() {
 
 fn setup(
     mut coms: Commands,
-    asset_server: Res<AssetServer>,
     character_library: Res<CharacterLibrary>,
 ) {
     coms
