@@ -573,7 +573,7 @@ impl CharacterMovement {
     if let Some(i_force) = self.interpolated_force.as_mut() {
       let i_force_velo = i_force.update();
       if i_force.is_finished() {self.interpolated_force = None;}
-      return i_force_velo;
+      return i_force_velo + self.velocity;
     } else {
       return self.velocity;
     }
@@ -739,6 +739,9 @@ pub fn manage_character_state(
       if buffer.player_id == *player_id {
         let transition = state.update(buffer,&mut movement, position);
         if let Some(t) = transition {
+            if t == AnimationTransition::FallToIdle {
+              movement.land();
+            }
           transition_writer.send(
       AnimationTransitionEvent {
               player_id: *player_id,

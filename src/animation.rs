@@ -69,7 +69,7 @@ impl AnimationTransitionEvent {
 }
 
 /// Transition variants used by [AnimationTransitionEvent]
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum AnimationTransition {
   WalkToIdle,
   BackwalkToIdle,
