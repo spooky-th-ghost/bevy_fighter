@@ -48,6 +48,7 @@ impl Default for CameraController {
 }
 
 #[doc(hidden)]
+#[allow(unstable_name_collisions)]
 pub fn set_camera_scale(
   mut query: Query<(&mut OrthographicProjection, &mut CameraController, &mut Transform)>,
   player_data: Res<PlayerData>

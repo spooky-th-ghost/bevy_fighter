@@ -423,7 +423,7 @@ impl CharacterState {
 
   pub fn get_hitbox_events_this_frame(&self) -> Option<Vec<HitboxEvent>> {
     use CharacterState::*;
-    if let Attacking{duration, attack, cancellable} = self.clone() {
+    if let Attacking{duration, attack, cancellable: _} = self.clone() {
       let mut events = Vec::new();
       for e in attack.hitbox_events.iter() {
         if (attack.busy as i8 - e.frame as i8) == duration as i8 {
@@ -584,7 +584,7 @@ impl CharacterMovement {
     return self.velocity.y < 0.0;
   }
 
-  pub fn attack_to_execute(&mut self,  buffer: &FighterInputBuffer, airborne: bool) -> Option<Attack> {
+  pub fn attack_to_execute(&mut self,  buffer: &FighterInputBuffer, _airborne: bool) -> Option<Attack> {
     if buffer.current_press.any_pressed() {
       return self.find_attack(buffer.current_motion, buffer.current_press.to_string());
     } else {

@@ -5,7 +5,7 @@ pub trait CustomLerp {
   fn custom_lerp(&self, target: Self, t: f32) -> Self;
 }
 
-
+#[allow(unstable_name_collisions)]
 impl CustomLerp for Vec2 {
   fn custom_lerp(&self, target: Vec2, t: f32) -> Vec2 {
     if &self.distance(target) > &0.02 {
