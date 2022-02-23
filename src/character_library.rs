@@ -1,13 +1,6 @@
 use serde::{Deserialize, Serialize};
+use serde_json::from_str;
 use bevy::prelude::*;
-use crate::animation::{
-  Animation
-};
-use crate::attacks::{Hitbox, Attack, HitboxSerialized, AttackSerialized};
-use crate::character::{
-  CharacterMovement,
-  CharacterMovementSerialized
-};
 use std::{
   path::Path,
   collections::{
@@ -16,7 +9,24 @@ use std::{
   },
   fs::read_to_string,
 };
-use serde_json::from_str;
+use crate::{
+  animation::Animation,
+  attacks::{
+    Attack,
+    AttackSerialized
+  },
+  collision::{
+    Hitbox,
+    HitboxSerialized,
+  },
+  character::{
+    CharacterMovement,
+    CharacterMovementSerialized
+  }
+};
+
+
+
 
 #[derive(Deserialize, Serialize)]
 pub struct CharacterSheetSerialized {

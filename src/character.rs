@@ -10,9 +10,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use crate::{
   character_library::CharacterLibrary,
-  attacks::{
-    Attack, HitboxEvent
-  },
+  attacks::Attack,
+  collision::HitboxEvent,
   inputs::{
     FighterInputBuffer,
     PlayerData,

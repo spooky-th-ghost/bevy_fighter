@@ -5,14 +5,14 @@ use crate::{
     CharacterState,
     PlayerId
   },
-  attacks::{
+  collision::{
     Hitbox,
     SpawnHitbox
   }
 };
 
 
-/// Find which hitboxes should be created each frame and create them
+#[doc(hidden)]
 pub fn spawn_hitboxes(
   mut coms: Commands,
   query: Query<(&PlayerId, &CharacterState, &CharacterMovement, &Transform)>,
@@ -31,7 +31,7 @@ pub fn spawn_hitboxes(
   }
 }
 
-/// update/remove hitboxes based on how long they've been on screen
+#[doc(hidden)]
 pub fn manage_hitboxes(
   mut coms: Commands,
   mut query: Query<(&mut Hitbox, Entity)>,
