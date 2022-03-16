@@ -1,3 +1,6 @@
+#[cfg(feature = "debug")]
+use bevy_inspector_egui::Inspectable;
+
 use bevy::{
   diagnostic::{
     Diagnostics,
@@ -5,6 +8,7 @@ use bevy::{
   },
   prelude::*
 };
+
 use regex::Regex;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
@@ -29,6 +33,7 @@ use crate::{
 };
 
 /// Handles the current state of a character
+#[cfg_attr(feature = "debug", derive(Inspectable))]
 #[derive(Debug, Clone, Component)]
 pub enum CharacterState {
   Idle,
@@ -517,6 +522,7 @@ pub struct CharacterMovement {
   pub can_turn: bool,
 }
 
+
 impl CharacterMovement {
     pub fn from_serialized(s: CharacterMovementSerialized, library: &CharacterLibrary, character_name: &str) -> Self {
     let mut attacks = HashMap::new();
@@ -651,6 +657,7 @@ pub struct CharacterMovementSerialized {
   pub backdash: Backdash
 }
 
+#[cfg_attr(feature = "debug", derive(bevy_inspector_egui::Inspectable))]
 #[derive(Component, Clone, Debug, Default)]
 pub struct BeatChain {
   pub all_attacks: Vec<String>,
@@ -670,6 +677,7 @@ impl BeatChain {
   }
 }
 
+#[cfg_attr(feature = "debug", derive(bevy_inspector_egui::Inspectable))]
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Backdash {
   Standard {busy: u8, speed: f32, motion_duration: u8},

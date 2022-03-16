@@ -9,7 +9,8 @@ use crate::{
 
 
 /// Attacks that can be done by a player
-#[derive(Debug, Clone)]
+#[cfg_attr(feature = "debug", derive(bevy_inspector_egui::Inspectable))]
+#[derive(Debug, Clone, Default)]
 pub struct Attack {
   /// The motion required to perform the attack
   pub name: String,
