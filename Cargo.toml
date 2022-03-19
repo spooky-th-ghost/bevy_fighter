@@ -13,7 +13,7 @@ default = []
 debug = ["bevy-inspector-egui"]
 
 [dependencies]
-bevy = "0.6.0"
+bevy = "0.6.1"
 bevy_backroll = "0.1"
 serde_json = "1.0"
 serde = "1.0.136"

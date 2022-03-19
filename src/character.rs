@@ -1,6 +1,5 @@
 #[cfg(feature = "debug")]
 use bevy_inspector_egui::Inspectable;
-
 use bevy::{
   diagnostic::{
     Diagnostics,
@@ -8,7 +7,6 @@ use bevy::{
   },
   prelude::*
 };
-
 use regex::Regex;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
@@ -495,7 +493,55 @@ impl CharacterState {
     *self = Idle;
   }
 }
+#[cfg_attr(feature = "debug", derive(bevy_inspector_egui::Inspectable))]
+#[derive(Component, Clone, Debug, Default)]
+pub struct CharacterAttacks {
+  pub all_attacks: Vec<String>,
+  pub available_attacks: Vec<String>,
+}
 
+impl CharacterAttacks {
+  pub fn from_attack_names(attack_names: Vec<String>) -> Self {
+    CharacterAttacks {
+      all_attacks: attack_names.clone(),
+      available_attacks: attack_names.clone()
+    }
+  }
+
+  pub fn reset(&mut self) {
+    self.available_attacks = self.all_attacks.clone();
+  }
+
+  pub fn attack_to_execute(&mut self,  buffer: &FighterInputBuffer, name: &Name, character_library: &CharacterLibrary, _airborne: bool) -> Option<Attack> {
+    if buffer.current_press.any_pressed() {
+      return self.find_attack(buffer, name, character_library);
+    } else {
+      return None;
+    }
+  }
+
+  pub fn best_match_attack_name(&self, buffer: &FighterInputBuffer) -> Option<String> {
+
+  }
+
+  pub fn find_attack(&mut self, buffer: &FighterInputBuffer, name: &Name, character_library: &CharacterLibrary) -> Option<Attack> {
+    let motion = buffer.current_motion; 
+    let buttons = buffer.current_press.to_string();
+    let mut current_regex: Regex;
+    for button in buttons.chars().rev() {
+      current_regex = Regex::new(&format!("({}).*({})", motion, button)[..]).unwrap();
+      for attack_name in self.available_attacks.iter() {
+        if current_regex.is_match(attack_name) {
+          //let full_attack_name = format!("{}__{}", name.as_str(), attack_name);
+          return character_library.find_attack(attack_name);
+        }
+      }
+    }
+    return None;
+  }
+}
+
+#[cfg_attr(feature = "debug", derive(Inspectable))]
 #[derive(Component, Clone, Debug, Default)]
 pub struct CharacterMovement {
   pub jumpsquat: u8,
@@ -521,7 +567,6 @@ pub struct CharacterMovement {
   pub interpolated_force: Option<InterpolatedForce>,
   pub can_turn: bool,
 }
-
 
 impl CharacterMovement {
     pub fn from_serialized(s: CharacterMovementSerialized, library: &CharacterLibrary, character_name: &str) -> Self {
@@ -658,26 +703,6 @@ pub struct CharacterMovementSerialized {
 }
 
 #[cfg_attr(feature = "debug", derive(bevy_inspector_egui::Inspectable))]
-#[derive(Component, Clone, Debug, Default)]
-pub struct BeatChain {
-  pub all_attacks: Vec<String>,
-  pub available_attacks: Vec<String>,
-}
-
-impl BeatChain {
-  pub fn from_attack_names(attack_names: Vec<String>) -> Self {
-    BeatChain {
-      all_attacks: attack_names.clone(),
-      available_attacks: attack_names.clone()
-    }
-  }
-
-  pub fn reset(&mut self) {
-    self.available_attacks = self.all_attacks.clone();
-  }
-}
-
-#[cfg_attr(feature = "debug", derive(bevy_inspector_egui::Inspectable))]
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub enum Backdash {
   Standard {busy: u8, speed: f32, motion_duration: u8},
@@ -711,7 +736,8 @@ pub struct FighterCharacterBundle {
   pub player_id: PlayerId,
   pub state: CharacterState,
   pub movement: CharacterMovement,
-  pub animation_controller: AnimationController
+  pub animation_controller: AnimationController,
+  pub name: Name,
 }
 
 impl FighterCharacterBundle {
@@ -730,6 +756,7 @@ impl FighterCharacterBundle {
       transform,
       player_id,
       animation_controller: AnimationController::new(character_prefix, library),
+      name: Name::new(character_prefix),
       ..Default::default()
     }
   }

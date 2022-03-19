@@ -1,7 +1,7 @@
 #[cfg(feature = "debug")]
 use bevy_inspector_egui::{WorldInspectorPlugin, Inspectable, RegisterInspectable};
 use bevy::prelude::*;
-use bevy_fighter::{prelude::*, character::{CharacterState, CharacterMovement}};
+use bevy_fighter::{prelude::*, character::CharacterState};
 
 
 fn main() {
@@ -33,10 +33,8 @@ fn setup(
     coms.spawn_bundle(UiCameraBundle::default());
     coms.spawn_bundle(
         FighterCharacterBundle::new(PlayerId::P1, "roa", &character_library)
-    )
-    .insert(Name::new("P1 (Roa)"));
+    );
     coms.spawn_bundle(
         FighterCharacterBundle::new(PlayerId::P2,"aoko", &character_library)
-    )
-    .insert(Name::new("P2 (Aoko)"));
+    );
 }
