@@ -1,10 +1,13 @@
 use bevy::prelude::*;
 use bevy_fighter::prelude::*;
 
+
 fn main() {
-  App::new()
+    let mut app = App::new();
+  app
     .add_plugins(DefaultPlugins)
-    .add_plugin(FighterPlugin)
+    .add_plugin(FighterPlugin);
+  app
     .add_startup_system(setup.after(FighterSystemLabels::InitializeCharacterData))
     .add_system(set_camera_scale)
     .run();

@@ -23,6 +23,7 @@ impl CustomLerp for Vec2 {
 /// interpolated forces are set to ease to 0 accross their duration, the proper velocity from
 /// the interpolated force can be accessed by calling their `update()` method, which will update 
 /// the easing value for the IntForce as well
+#[cfg_attr(feature = "debug", derive(bevy_inspector_egui::Inspectable))]
 #[derive(Clone, Copy, Debug)]
 pub struct InterpolatedForce {
   current_velocity: Vec2,
