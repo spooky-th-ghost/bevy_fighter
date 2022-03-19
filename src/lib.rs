@@ -2,6 +2,9 @@
 #[macro_use]
 extern crate lazy_static;
 
+#[cfg(feature = "debug")]
+use bevy_inspector_egui::{WorldInspectorPlugin, RegisterInspectable};
+
 /// Parsing inputs, mapping input devices
 pub mod inputs;
 /// Handles attack damage, properties, etc.
@@ -53,8 +56,16 @@ impl Plugin for FighterPlugin {
       .add_plugin(FrameTimeDiagnosticsPlugin)
       .insert_resource(CharacterLibrary::new())
       .insert_resource(PlayerData::default())
-      .add_startup_system(initialize_character_library.label(FighterSystemLabels::InitializeCharacterData))
-      .add_stage("main",SystemStage::single_threaded()
+      .add_startup_system(initialize_character_library.label(FighterSystemLabels::InitializeCharacterData));
+    
+    #[cfg(feature = "debug")]
+    app
+      .add_plugin(WorldInspectorPlugin::new())
+      .register_inspectable::<CharacterState>()
+      .register_inspectable::<CharacterMovement>()
+      .register_inspectable::<CharacterAttacks>();
+
+    app.add_stage("main",SystemStage::single_threaded()
         .with_run_criteria(FixedTimestep::steps_per_second(60.0))
         .with_system(
           write_fighter_inputs

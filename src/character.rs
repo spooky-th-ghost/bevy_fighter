@@ -8,7 +8,6 @@ use bevy::{
   prelude::*
 };
 use regex::Regex;
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use crate::{
   character_library::CharacterLibrary,
@@ -128,18 +127,18 @@ impl CharacterState {
     }
   } 
   /// updates a character state, advancing it's timers and changing it based on input and character movement
-  pub fn update(&mut self, buffer: &mut FighterInputBuffer, movement: &mut CharacterMovement, position: Vec3) -> Option<AnimationTransition> {
+  pub fn update(&mut self, buffer: &mut FighterInputBuffer, movement: &mut CharacterMovement, attacks: &mut CharacterAttacks, name: &Name, library: &CharacterLibrary, position: Vec3) -> Option<AnimationTransition> {
     use CharacterState::*;
     self.tick();
     
     let new_state = match self {
-      Idle | Walking | BackWalking | Crouching => self.from_neutral_states(buffer, movement),
+      Idle | Walking | BackWalking | Crouching => self.from_neutral_states(buffer, movement, attacks, name, library),
       Dashing => self.from_dashing(buffer, movement),
       Jumpsquat { duration:_,velocity:_ } => self.from_jump_squat(movement),
-      Rising { busy: _ } | Falling => self.from_neutral_airborne(buffer, movement, position),
-      BackDashing { duration:_ } => self.from_backdashing(buffer, movement),
-      Attacking {duration:_, attack:_, cancellable:_} => self.from_attacking(buffer, movement),
-      AirDashing { busy:_,duration:_,velocity:_} | AirBackDashing { busy:_,duration:_,velocity:_} => self.from_air_dashing(buffer, movement),
+      Rising { busy: _ } | Falling => self.from_neutral_airborne(buffer, movement, attacks, name, library, position),
+      BackDashing { duration:_ } => self.from_backdashing(buffer, movement, attacks, name, library,),
+      Attacking {duration:_, attack:_, cancellable:_} => self.from_attacking(buffer, movement, attacks, name, library),
+      AirDashing { busy:_,duration:_,velocity:_} | AirBackDashing { busy:_,duration:_,velocity:_} => self.from_air_dashing(buffer, movement, attacks, name, library),
       _ => self.clone()
     };
     let transition = if self.clone() != new_state {
@@ -156,9 +155,9 @@ impl CharacterState {
   ///  - Walking
   ///  - Backwalking
   ///  - Crouching
-  pub fn from_neutral_states(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
+  pub fn from_neutral_states(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement, attacks: &mut CharacterAttacks, name: &Name, library: &CharacterLibrary)  -> Self {
     use CharacterState::*;
-    if let Some(attack) = movement.attack_to_execute(buffer, false) {
+    if let Some(attack) = attacks.attack_to_execute(buffer, name, library, true) {
       return self.buffer_attack(attack);
     }
 
@@ -207,18 +206,18 @@ impl CharacterState {
     }
   }
 
-  pub fn from_air_dashing(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
+  pub fn from_air_dashing(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement, attacks: &mut CharacterAttacks, name: &Name, library: &CharacterLibrary) -> Self {
     use CharacterState::*;
     match self {
       AirDashing {busy:_ ,duration, velocity:_} => {
         if *duration == 0 {
-          return self.from_neutral_airborne(buffer, movement, Vec3::ONE);
+          return self.from_neutral_airborne(buffer, movement, attacks, name, library, Vec3::ONE);
         }
         return self.clone();
       },
       AirBackDashing {busy:_,duration, velocity:_} => {
         if *duration == 0 {
-          return self.from_neutral_airborne(buffer, movement, Vec3::ONE);
+          return self.from_neutral_airborne(buffer, movement, attacks, name, library, Vec3::ONE);
         }
         return self.clone();
       },
@@ -231,7 +230,7 @@ impl CharacterState {
   ///  - Falling
   ///  - Airdashing
   ///  - Airbackdashing
-  pub fn from_neutral_airborne(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement, position: Vec3) -> Self {
+  pub fn from_neutral_airborne(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement, attacks: &mut CharacterAttacks, name: &Name, library: &CharacterLibrary, position: Vec3) -> Self {
     use CharacterState::*;
     if position.y <= 0.0 {
       return Idle;
@@ -239,25 +238,25 @@ impl CharacterState {
     match self {
       Rising { busy } => {
         if *busy == 0 {
-          return self.from_airborne_input(buffer, movement);
+          return self.from_airborne_input(buffer, movement, attacks, name, library);
         } else {
           return self.clone();
         }
       },
       Falling | AirDashing {busy:_,duration:_,velocity:_} |  AirBackDashing {busy:_,duration:_,velocity:_} => {
-        return self.from_airborne_input(buffer, movement);
+        return self.from_airborne_input(buffer, movement, attacks, name, library);
       },
       _ => return self.clone(),
     };
   }
 
   /// Returns a new state based on input and the backdash timer from backdash
-  pub fn from_backdashing(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
+  pub fn from_backdashing(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement, attacks: &mut CharacterAttacks, name: &Name, library: &CharacterLibrary) -> Self {
     use CharacterState::*;
     match self {
       BackDashing {duration} => {
         if *duration == 0 {
-          return self.from_neutral_states(buffer, movement);
+          return self.from_neutral_states(buffer, movement, attacks, name, library);
         }
         return self.clone();
       },
@@ -266,12 +265,12 @@ impl CharacterState {
   }
 
   /// Returns a new state based on input and the attack timer from attack
-  pub fn from_attacking(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
+  pub fn from_attacking(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement, attacks: &mut CharacterAttacks, name: &Name, library: &CharacterLibrary) -> Self {
     use CharacterState::*;
     match self {
       Attacking {duration, attack:_, cancellable} => {
         if *duration == 0 || *cancellable {
-          return self.from_neutral_states(buffer, movement);
+          return self.from_neutral_states(buffer, movement, attacks, name, library);
         }
         return self.clone();
       },
@@ -280,9 +279,9 @@ impl CharacterState {
   }
 
   // Returns a new state from input while aireborne
-  pub fn from_airborne_input (&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement) -> Self {
+  pub fn from_airborne_input(&self, buffer: &FighterInputBuffer, movement: &mut CharacterMovement, attacks: &mut CharacterAttacks, name: &Name, library: &CharacterLibrary) -> Self {
     use CharacterState::*;
-    if let Some(attack) = movement.attack_to_execute(buffer, true) {
+    if let Some(attack) = attacks.attack_to_execute(buffer, name, library, true) {
       return self.buffer_attack(attack);
     }
 
@@ -501,7 +500,15 @@ pub struct CharacterAttacks {
 }
 
 impl CharacterAttacks {
-  pub fn from_attack_names(attack_names: Vec<String>) -> Self {
+  pub fn from_library(library: &CharacterLibrary, character_name: &str) -> Self {
+    let mut attack_names = Vec::new();
+    let my_regex = Regex::new(&format!("(^{}.+)", character_name)[..]).unwrap();
+    for (attack_id, _attack) in library.read_attacks() {
+      if my_regex.is_match(attack_id) {
+        let trimmed_attack_name = attack_id.replace(character_name, "").replace("_","");
+        attack_names.push(trimmed_attack_name.clone());
+      }
+    }
     CharacterAttacks {
       all_attacks: attack_names.clone(),
       available_attacks: attack_names.clone()
@@ -520,9 +527,9 @@ impl CharacterAttacks {
     }
   }
 
-  pub fn best_match_attack_name(&self, buffer: &FighterInputBuffer) -> Option<String> {
+  // pub fn best_match_attack_name(&self, buffer: &FighterInputBuffer) -> Option<String> {
 
-  }
+  // }
 
   pub fn find_attack(&mut self, buffer: &FighterInputBuffer, name: &Name, character_library: &CharacterLibrary) -> Option<Attack> {
     let motion = buffer.current_motion; 
@@ -532,8 +539,8 @@ impl CharacterAttacks {
       current_regex = Regex::new(&format!("({}).*({})", motion, button)[..]).unwrap();
       for attack_name in self.available_attacks.iter() {
         if current_regex.is_match(attack_name) {
-          //let full_attack_name = format!("{}__{}", name.as_str(), attack_name);
-          return character_library.find_attack(attack_name);
+          let full_attack_name = format!("{}_{}", name.as_str(), attack_name);
+          return character_library.find_attack(full_attack_name);
         }
       }
     }
@@ -560,8 +567,6 @@ pub struct CharacterMovement {
   pub max_airdash_time: u8,
   pub max_air_backdash_time: u8,
   pub backdash: Backdash,
-  pub attacks: HashMap<String, Attack>,
-  pub beat_chain: BeatChain,
   pub facing_vector: f32,
   pub velocity: Vec2,
   pub interpolated_force: Option<InterpolatedForce>,
@@ -569,17 +574,7 @@ pub struct CharacterMovement {
 }
 
 impl CharacterMovement {
-    pub fn from_serialized(s: CharacterMovementSerialized, library: &CharacterLibrary, character_name: &str) -> Self {
-    let mut attacks = HashMap::new();
-    let mut attack_names = Vec::new();
-    let my_regex = Regex::new(&format!("(^{}.+)", character_name)[..]).unwrap();
-    for (attack_id, attack) in library.read_attacks() {
-      if my_regex.is_match(attack_id) {
-        let trimmed_attack_name = attack_id.replace(character_name, "").replace("_","");
-        attack_names.push(trimmed_attack_name.clone());
-        attacks.insert(trimmed_attack_name.clone(), attack.clone());
-      }
-    }
+    pub fn from_serialized(s: CharacterMovementSerialized) -> Self {
 
     CharacterMovement {
       jumpsquat: s.jumpsquat,
@@ -601,8 +596,6 @@ impl CharacterMovement {
       airdashes_remaining: s.airdashes,
       velocity: Vec2::ZERO,
       interpolated_force: None,
-      attacks,
-      beat_chain: BeatChain::from_attack_names(attack_names),
       can_turn: true,
     }
   }
@@ -634,33 +627,12 @@ impl CharacterMovement {
     return self.velocity.y < 0.0;
   }
 
-  pub fn attack_to_execute(&mut self,  buffer: &FighterInputBuffer, _airborne: bool) -> Option<Attack> {
-    if buffer.current_press.any_pressed() {
-      return self.find_attack(buffer.current_motion, buffer.current_press.to_string());
-    } else {
-      return None;
-    }
-  }
-
   pub fn can_airdash(&self) -> bool {
     return self.airdashes_remaining > 0;
   }
 
   pub fn spend_airdash(&mut self) {
     self.airdashes_remaining = countdown(self.airdashes_remaining);
-  }
-
-  pub fn find_attack(&mut self, motion: u8, buttons: String) -> Option<Attack> {
-    let mut current_regex: Regex;
-    for button in buttons.chars().rev() {
-      current_regex = Regex::new(&format!("({}).*({})", motion, button)[..]).unwrap();
-      for attack_name in self.beat_chain.available_attacks.iter() {
-        if current_regex.is_match(attack_name) {
-          return self.attacks.get(attack_name).cloned();
-        }
-      }
-    }
-    return None;
   }
 
   pub fn land(&mut self) {
@@ -736,6 +708,7 @@ pub struct FighterCharacterBundle {
   pub player_id: PlayerId,
   pub state: CharacterState,
   pub movement: CharacterMovement,
+  pub attacks: CharacterAttacks,
   pub animation_controller: AnimationController,
   pub name: Name,
 }
@@ -749,14 +722,15 @@ impl FighterCharacterBundle {
 
     let movement = library.get_movement(character_prefix).unwrap();
     let texture_atlas = library.get_atlas(character_prefix).unwrap();
-    
+    let attacks = CharacterAttacks::from_library(library, character_prefix);
     FighterCharacterBundle {
       movement,
       texture_atlas,
       transform,
       player_id,
       animation_controller: AnimationController::new(character_prefix, library),
-      name: Name::new(character_prefix),
+      attacks,
+      name: Name::new(character_prefix.to_owned()),
       ..Default::default()
     }
   }
@@ -764,15 +738,16 @@ impl FighterCharacterBundle {
 
 /// Manage and update ChracterState for all characters based on input
 pub fn manage_character_state(
-  mut player_data: ResMut<PlayerData>, 
-  mut query: Query<(&PlayerId, &mut CharacterState, &mut CharacterMovement)>,
+  mut player_data: ResMut<PlayerData>,
+  library: Res<CharacterLibrary>, 
+  mut query: Query<(&PlayerId, &Name, &mut CharacterState, &mut CharacterMovement, &mut CharacterAttacks)>,
   mut transition_writer: EventWriter<AnimationTransitionEvent>,
 ) {
-  for (player_id, mut state, mut movement) in query.iter_mut() {
+  for (player_id, name, mut state, mut movement, mut attacks) in query.iter_mut() {
     let position = player_data.get_position(player_id);
     for buffer in player_data.buffers.iter_mut() {
       if buffer.player_id == *player_id {
-        let transition = state.update(buffer,&mut movement, position);
+        let transition = state.update(buffer,&mut movement, &mut attacks, name, &library, position);
         if let Some(t) = transition {
             if t == AnimationTransition::FallToIdle {
               movement.land();
