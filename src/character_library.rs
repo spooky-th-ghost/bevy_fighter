@@ -198,7 +198,6 @@ pub fn load_character_data(&mut self, character_name: &str, asset_server: &Res<A
   }
 
   pub fn find_attack(&self, attack_id: String) -> Option<Attack> {
-    println!("Looking for {}", attack_id);
     self.attacks.get(&attack_id).cloned()
   }
 
